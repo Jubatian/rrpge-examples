@@ -242,7 +242,7 @@ offrzoom:
 	; Set up source split mask and partitioning
 
 	mov d,     0x007F	; 1024x512 source
-	mov [0x2EF5], d
+	mov [0x2EFC], d
 	mov d,     0x8000	; Source partition size: 64K * 32bits
 	or  [0x2EF7], d
 	mov d,     0x0007	; Destination partition size: 64K * 32bits

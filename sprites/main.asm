@@ -24,8 +24,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Sprites and Tiles"
-	db "\nVersion: 00.000.000"
-	db "\nEngSpec: 00.000.000"
+	db "\nVersion: 00.000.001"
+	db "\nEngSpec: 00.001.000"
 	db "\nLicense: RRPGEv1\n\n"
 	db 0
 
@@ -284,15 +284,14 @@ tile_row:
 	; operations.
 
 	mov xm3,   PTR16I
-	mov x3,    0x2EF1	; Start with source increment
-	mov a,     2
-	mov [x3],  a		; Source increment (16 pixels tile width)
-	add x3,    1		; Skip destination whole
+	mov x3,    0x2EF3	; Start with destination fraction
 	mov a,     0
 	mov [x3],  a		; Destination fraction
+	mov a,     2
+	mov [x3],  a		; Source increment (16 pixels tile width)
 	mov a,     80
 	mov [x3],  a		; Destination increment whole (640 pixels)
-	add x3,    2		; Skip source split mask & reindex bank select
+	add x3,    1		; Skip reindex bank select
 	mov a,     0x80FF
 	mov [x3],  a		; Source partition, rotate, AND mask
 	mov a,     0x0000
@@ -377,11 +376,11 @@ sprite:
 	mov x3,    0x2EF0	; Start with source
 	mov a,     0x8200	; Sprite is loaded here in VRAM
 	mov [x3],  a		; Source start
+	mov x3,    0x2EF4	; Source increment
 	mov a,     1
 	mov [x3],  a		; Source increment
-	add x3,    2		; Skip destination whole & fraction
-	mov [x3],  a		; Destination increment whole
-	add x3,    3		; Skip source split mask & reindex & partition
+	mov [x3],  a		; Destination increment
+	add x3,    2		; Skip reindex & partition
 	mov a,     0x0200
 	mov [x3],  a		; Mode, colorkey (ck. enabled, color index 0)
 	mov a,     16

@@ -21,8 +21,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.000"
-	db "\nEngSpec: 00.000.000"
+	db "\nVersion: 00.000.001"
+	db "\nEngSpec: 00.001.000"
 	db "\nLicense: RRPGEv1\n\n"
 	db 0
 
@@ -86,15 +86,15 @@ section code
 	mov x3,    0x2EF0
 	mov a,     0x0000	; Source whole: partition 0
 	mov [x3],  a
-	mov a,     1		; Source increment
+	mov a,     0		; Source fraction
 	mov [x3],  a
 	mov a,     0x0000	; Destination whole: partition 0
 	mov [x3],  a
 	mov a,     0		; Destination fraction
 	mov [x3],  a
-	mov a,     1		; Destination increment whole
+	mov a,     1		; Source increment
 	mov [x3],  a
-	mov a,     0		; Source split mask
+	mov a,     1		; Destination increment
 	mov [x3],  a
 	mov a,     0		; Reindex bank select
 	mov [x3],  a
