@@ -23,18 +23,22 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Binary data      "
-	db "\nVersion: 00.000.000"
-	db "\nEngSpec: 00.000.000"
-	db "\nLicense: RRPGEv1\n\n"
+	db "\nVersion: 00.000.001"
+	db "\nEngSpec: 00.004.001"
+	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
 org 0xBC0
 
-	dw 0x0001, 0x0000, 0x0100, 0x0010, 0xF800
+	dw 0x0000, 0x0000, 0x0100, 0x0010, 0xF800
 
 
 
 section code
+
+	; Change to 8 bit mode
+
+	jsv {kc_vid_mode, 1}
 
 	; Apply palette
 

@@ -18,10 +18,15 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Mixer            "
-	db "\nVersion: 00.000.000"
-	db "\nEngSpec: 00.000.000"
-	db "\nLicense: RRPGEv1\n\n"
+	db "\nVersion: 00.000.001"
+	db "\nEngSpec: 00.004.001"
+	db "\nLicense: RRPGEv2\n\n"
 	db 0
+
+
+org 0xBC0
+
+	dw 0x0000, 0x0000, 0x0100, 0x0000, 0xF800
 
 
 ; Frequency - volume data. Tone 0x8E represents A4 (440Hz)
@@ -42,12 +47,6 @@ a_vol1:	dw 0x0066
 a_vole:
 
 
-; Sound output is set up to Mono, 48KHz, 512 samples / half buffer
-
-org 0xBC0
-
-	dw 0x0001, 0x0000, 0x1100, 0x0000, 0xF800
-
 
 section data
 
@@ -61,6 +60,10 @@ mix_s1:	ds 2			; Sample 0 offset (whole, fraction)
 mix_st:	ds 1
 
 section code
+
+	; Change to 8 bit mode
+
+	jsv {kc_vid_mode, 1}
 
 	; Set up sample data
 
@@ -142,9 +145,6 @@ lcp:	mov a,     [x3]
 ;
 ; Audio event (all registers are saved by the kernel)
 ;
-; param0: Left / Mono target sample pointer in sample (byte) units
-; param1: Right target sample pointer in sample (byte) units
-;
 
 audio_ev:
 	mov xm3,   PTR16I
@@ -152,9 +152,15 @@ audio_ev:
 	mov xm1,   PTR16I
 	mov xm0,   PTR16I
 
-	; Load step
+	; Load step & set up next buffer pointers
 
 	mov d,     [mix_st]
+	mov b,     d
+	and b,     0x7
+	mov a,     b
+	shl b,     8		; b: Right channel, also word offset of buffer
+	or  a,     b		; Left & Right pointers
+	mov [0x1EDE], a		; Next buffer location to fetch for the audio DMA (left, right same)
 
 	; Sample 0
 
@@ -180,9 +186,7 @@ audio_ev:
 	mov [mix_v0], x0
 	mov [x3],  a		; Amplitudo (volume)
 	mov x3,    0x1ED8	; Mixer, destonation start
-	mov a,     [bp + 0]
-	shr a,     1
-	mov [x3],  a
+	mov [x3],  b
 	mov x3,    0x1EDF	; Mixer, start trigger
 	mov a,     0x2100	; Start, override, process 512 samples
 	mov [x3],  a
@@ -216,9 +220,7 @@ audio_ev:
 	mov [mix_v1], x0
 	mov [x3],  a		; Amplitudo (volume)
 	mov x3,    0x1ED8	; Mixer, destonation start
-	mov a,     [bp + 0]
-	shr a,     1
-	mov [x3],  a
+	mov [x3],  b
 	mov x3,    0x1EDF	; Mixer, start trigger
 	mov a,     0x0100	; Start, additive, process 512 samples
 	mov [x3],  a

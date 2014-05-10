@@ -21,9 +21,9 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.001"
-	db "\nEngSpec: 00.001.000"
-	db "\nLicense: RRPGEv1\n\n"
+	db "\nVersion: 00.000.002"
+	db "\nEngSpec: 00.004.001"
+	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
 org 0xBC0
@@ -75,9 +75,9 @@ section code
 
 	jfa rledec {0x3, 0xE800, 0, 0x3000, 0x8000, 0x0000, PAGE_ROPD, 0x400, 0x1230}
 
-	; Set video partition size: 32K cells
+	; Set page 0 video partition size: 32K cells, rest remain at 64K cells
 
-	mov a,     6
+	mov a,     0x7776
 	mov [0x2EE2], a
 
 	; Copy image to next video bank which is used as a full partition
@@ -164,7 +164,7 @@ rlop:	mov a,     [x2]
 
 	; Set up main loop
 
-	mov x3,    0x120	; Looks good for start
+	mov x3,    0x240	; Looks good for start
 	mov c,     x3
 	mov [auitc], x3
 
@@ -173,7 +173,7 @@ rlop:	mov a,     [x2]
 	mov xm2,   PTR16I
 
 	; Sync loop to real time.
-	; x3: Real time counter (approx 40/sec)
+	; x3: Real time counter (93.75Hz)
 	; Note that the fadeout depends on the system's performance: on a
 	; faster RRPGE implementation it will fade out faster until reaching
 	; 40 FPS. On the minimal implementation at about 15 FPS is realized.
@@ -187,6 +187,7 @@ lmain:	mov c,     [auitc]
 	; Load a value from the large ROPD sine table by x3
 
 	mov x2,    x3
+	shr x2,    1
 	and x2,    0x1FF
 	add x2,    0xE00	; Offset of large sine (-0x4000 - 0x4000)
 	mov a,     [x2]
@@ -213,6 +214,7 @@ lmain:	mov c,     [auitc]
 	add b,     d
 	add b,     0x80		; 0x0080 - 0x2880, zoom
 	mov d,     x3
+	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
 	jfa offrzoom {320, 200, d, b}
 
@@ -223,9 +225,6 @@ lmain:	mov c,     [auitc]
 
 ;
 ; Audio event (all registers are saved by the kernel)
-;
-; param0: Left / Mono target sample pointer in sample (byte) units
-; param1: Right target sample pointer in sample (byte) units
 ;
 
 audio_ev:

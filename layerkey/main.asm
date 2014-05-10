@@ -22,9 +22,9 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Multiple layers  "
-	db "\nVersion: 00.000.001"
-	db "\nEngSpec: 00.001.000"
-	db "\nLicense: RRPGEv1\n\n"
+	db "\nVersion: 00.000.002"
+	db "\nEngSpec: 00.004.001"
+	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
 org 0xBC0
@@ -117,7 +117,7 @@ l2ena:	or  [x3],  a
 
 	; Set up events
 
-	mov a,     0x180
+	mov a,     0x300
 	mov [auitc], a
 	jsv {kc_vid_sethnd, video_ev, 400}
 	jsv {kc_aud_sethnd, audio_ev}
@@ -151,6 +151,7 @@ video_ev:
 	mov xm2,   PTR16I
 	mov xm1,   PTR16I
 	mov x3,    [auitc]	; Real time sync
+	shr x3,    1
 
 	; Load a value from the large ROPD sine table by x3
 
