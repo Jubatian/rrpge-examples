@@ -23,8 +23,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Binary data      "
-	db "\nVersion: 00.000.001"
-	db "\nEngSpec: 00.004.001"
+	db "\nVersion: 00.000.002"
+	db "\nEngSpec: 00.007.001"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -36,10 +36,6 @@ org 0xBC0
 
 section code
 
-	; Change to 8 bit mode
-
-	jsv {kc_vid_mode, 1}
-
 	; Apply palette
 
 	mov xm3,   PTR16I
@@ -49,14 +45,29 @@ lpal:	jsv {kc_vid_setpal, x3, [x3]}
 	xeq x3,    0x200
 	jmr lpal
 
-	; Set up display list of page 2 for 400 lines. Only need to set a 80
-	; increment for lines 1 - 399, in the whole part.
+	; Use the Graphics FIFO to turn off double scanned mode in the
+	; Graphics Display Generator's register 0x002.
 
-	mov a,     80
-	mov x3,    0x2002
-ldls:	mov [x3],  a		; Write whole part only
-	add x3,    1
-	xeq x3,    0x2320
+	mov a,     0x5000	; Keep output width at 80 cells (not used here)
+	mov b,     0x8002	; Graphics reg. write + 0x002 command
+	mov [0x1E06], b		; Write command
+	mov [0x1E07], a		; Write data, this will trigger a store
+	mov [0x1E05], a		; Graphics FIFO start trigger (value ignored)
+gfwa:	mov a,     [0x1E05]
+	xbc a,     0		; Wait for the FIFO to become empty
+	jmr gfwa		; So the graphics may be accessed
+
+	; Set up display list for 400 image lines. Will use entry 1 of the
+	; list for this.
+
+	mov a,     0x4000	; High part of the display list entry
+	mov b,     0x8000	; Low part of the display list entry
+	mov x3,    0x2002	; Points to the list, first line, entry 1
+ldls:	mov [x3],  a
+	mov [x3],  b
+	add a,     5		; Next line (16 * 5 = 80 cells width)
+	add x3,    6		; Skip to next line's entry 1
+	xeq x3,    0x2C82	; Would be line 400's entry 1
 	jmr ldls
 
 	; Load the pages of the image. Note the use of delay in the loading

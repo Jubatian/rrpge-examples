@@ -21,8 +21,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.002"
-	db "\nEngSpec: 00.004.001"
+	db "\nVersion: 00.000.003"
+	db "\nEngSpec: 00.007.001"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -61,128 +61,149 @@ reimp:				; Reindex map (darkening when source is darker)
 	dw 0x0901, 0x0903, 0x0905, 0x0607, 0x0809, 0x090B, 0x0C0D, 0x090F	; F
 reimp_end:
 
-section data
+accrg:				; 8 accelerator registers for rotozoom
+	dw 0x0001		; Source bank: 1, partition irrelevant.
+	dw 0x0000		; Destination bank: 0, partition irrelevant.
+	dw 0x0000		; Dest. incr: 1, reindex bank irrelevant (by destination).
+	dw 0x00F0		; Source partition, X/Y split irrelevant, destination full.
+	dw 0x00FF		; Source masks: no effect (OR: clear, AND: set).
+	dw 0x3000		; Reindex by destination mode, no colorkey.
+	dw 640			; One line takes 640 4bit pixels.
+	dw 0x0000		; Trigger: value irrelevant.
 
-auitc:	ds 1			; Audio interrupt counter
 
 section code
 
-	; Use the wave effect to set up display list
+	; Switch to 4 bit mode
 
-	jfa effwave {0, 0, 0, 0, 0x2000}
+	jsv {kc_vid_mode, 0}
+
+	; Use the Graphics FIFO to turn off double scanned mode in the
+	; Graphics Display Generator's register 0x002.
+
+	mov a,     0x5000	; Keep output width at 80 cells (not used here)
+	mov b,     0x8002	; Graphics reg. write + 0x002 command
+	mov [0x1E06], b		; Write command
+	mov [0x1E07], a		; Write data, this will trigger a store
+	mov [0x1E05], a		; Graphics FIFO start trigger (value ignored)
+gfwa:	mov a,     [0x1E05]
+	xbc a,     0		; Wait for the FIFO to become empty
+	jmr gfwa		; So the graphics may be accessed
+
+	; Set up display list for 400 image lines. Will use entry 1 of the
+	; list for this.
+
+	mov xm3,   PTR16I
+	mov a,     0x4000	; High part of the display list entry
+	mov b,     0x8000	; Low part of the display list entry
+	mov x3,    0x2002	; Points to the list, first line, entry 1
+ldls:	mov [x3],  a
+	mov [x3],  b
+	add a,     5		; Next line (16 * 5 = 80 cells width)
+	add x3,    6		; Skip to next line's entry 1
+	xeq x3,    0x2C82	; Would be line 400's entry 1
+	jmr ldls
 
 	; Load RLE image
 
 	jfa rledec {0x3, 0xE800, 0, 0x3000, 0x8000, 0x0000, PAGE_ROPD, 0x400, 0x1230}
 
-	; Set page 0 video partition size: 32K cells, rest remain at 64K cells
+	; Copy and expand image into the next VRAM bank, to be an 1024 x 512
+	; surface suitable for the rotozoomer. Uses the Accelerator for it.
 
-	mov a,     0x7776
-	mov [0x2EE2], a
+	mov xm2,   PTR16
+	mov x2,    0x1E07	; FIFO data write offset
+	mov c,     0x8016	; FIFO: Accelerator X pointers & increments
+	mov [0x1E06], c
+	mov a,     0x0000	; Source X whole
+	mov [x2],  a
+	mov a,     0x0000	; Source X fraction
+	mov [x2],  a
+	mov a,     0x0001	; Source X increment whole
+	mov [x2],  a
+	mov a,     0x0000	; Source X increment fraction
+	mov [x2],  a
+	mov a,     0x0050	; Source X post-add whole
+	mov [x2],  a
+	mov a,     0x0000	; Source X post-add fraction
+	mov [x2],  a
+	mov a,     0x0000	; Destination whole
+	mov [x2],  a
+	mov a,     0x0000	; Destination fraction
+	mov [x2],  a
+	mov a,     0x0080	; Destination post-add whole
+	mov [x2],  a
+	mov a,     0x0000	; Destination post-add fraction
+	mov [x2],  a
+	mov c,     0x8008	; FIFO: Acc. source bank & partition select
+	mov [0x1E06], c
+	mov a,     0x0000	; Source bank: 0, partition select unused.
+	mov [x2],  a
+	mov a,     0x0001	; Destination bank: 1. partition select unused.
+	mov [x2],  a
+	mov a,     0x0000	; No reindexing, dest. increment is 1
+	mov [x2],  a
+	mov a,     0xFFF0	; Partition sizes & X/Y split: all full (only X used)
+	mov [x2],  a
+	mov a,     0x00FF	; Source masks
+	mov [x2],  a
+	mov a,     0x0000	; Mode: Plain Block Blitter, no reindex, no colorkey
+	mov [x2],  a
+	mov a,     640		; Output 640 4bit pixels in a line
+	mov [x2],  a
+	mov c,     0x800F	; Accelerator start trigger
+	mov b,     400		; 400 lines
+cplp0:	mov [0x1E06], c
+	mov [x2],  a		; Fire accelerator (written value irrelevant)
+	sub b,     1
+	xeq b,     0
+	jmr cplp0
 
-	; Copy image to next video bank which is used as a full partition
-
-	mov xm3,   PTR16I
-	mov x3,    0x2EF0
-	mov a,     0x0000	; Source whole: partition 0
-	mov [x3],  a
-	mov a,     0		; Source fraction
-	mov [x3],  a
-	mov a,     0x0000	; Destination whole: partition 0
-	mov [x3],  a
-	mov a,     0		; Destination fraction
-	mov [x3],  a
-	mov a,     1		; Source increment
-	mov [x3],  a
-	mov a,     1		; Destination increment
-	mov [x3],  a
-	mov a,     0		; Reindex bank select
-	mov [x3],  a
-	mov a,     0x80FF	; Source partition, rotate, AND mask
-	mov [x3],  a
-	mov a,     0x0000	; Mode, colorkey
-	mov [x3],  a
-	mov a,     640		; Number of pixels to process (1 - 1024)
-	mov [x3],  a
-	mov a,     0		; Source high (Video RAM bank)
-	mov [x3],  a
-	mov a,     1		; Destination high (Video RAM bank)
-	mov [x3],  a
-	mov [x3],  a		; Unused
-	mov [x3],  a		; Unused
-	mov [x3],  a		; Unused
-	mov a,     0		; Line pattern & start trigger
-	mov b,     48		; Destination add after each line
-	mov xm3,   PTR16
-	mov d,     400
-acc0:	mov [x3],  a		; Start
-	add [0x2EF2], b		; Pad destination (form an 1024 px wide image)
-	sub d,     1
-	xeq d,     0
-	jmr acc0
-
-	; Revert destination to Video RAM bank 0
-
-	mov a,     0
-	mov [0x2EFB], a		; Destination high
-
-	; Clear partition zero
-
-	mov a,     0
-	mov [0x2EF2], a		; Destination whole
-	mov a,     0x0400	; Line mode
-	mov [0x2EF8], a		; Mode, colorkey
-	mov a,     1024
-	mov [0x2EF9], a		; Count of pixels
-	mov a,     0x0000	; Line pattern & start trigger
-	mov xm3,   PTR16
-	mov d,     256
-acc1:	mov [x3],  a		; Start
-	sub d,     1
-	xeq d,     0
-	jmr acc1
-
-	; Set up reindexing
+	; Accelerator is copying stuff. Meanwhile set up reindexing table,
+	; also through the Graphics FIFO.
 
 	mov xm3,   PTR16I
-	mov xm2,   PTR16I
-	mov x2,    reimp
-	mov x3,    0x2F00
-rlop:	mov a,     [x2]
-	mov [x3],  a
-	xeq x2,    reimp_end
+	mov x3,    reimp
+	mov c,     0x8100	; First reindex register
+	mov [0x1E06], c
+rlop:	mov a,     [x3]
+	mov [x2],  a
+	xeq x3,    reimp_end
 	jmr rlop
 
-	; Set up reindex by destination mode, and the rest for rotozooming
+	; Set up the Accelerator for the rotozoomer: destination props.
 
-	mov a,     0x3800	; Mode: Reindex by destination
-	mov [0x2EF8], a
-	mov a,     0x0001	; Source on bank 1
-	mov [0x2EFA], a		; Source high (Video RAM bank)
-	mov a,     1
-	mov [0x2EF4], a		; Destination increment
+	mov c,     0x801C	; FIFO: Destination whole
+	mov [0x1E06], c
+	mov a,     0x0000	; Destination whole
+	mov [x2],  a
+	mov a,     0x0000	; Destination fraction
+	mov [x2],  a
+	mov a,     0x0050	; Destination post-add whole
+	mov [x2],  a
+	mov a,     0x0000	; Destination post-add fraction
+	mov [x2],  a
 
-	; Set up main loop
+	; Enter main loop. The real time synchronization is based on the audio
+	; counter, running at 48KHz. It is (software) divided by 1024 to get a
+	; roughly 47Hz base tick. x3 will keep track of this, while x0 will
+	; keep track of 47Hz ticks.
 
 	mov x3,    0x240	; Looks good for start
-	mov c,     x3
-	mov [auitc], x3
-
-	jsv {kc_aud_sethnd, audio_ev}
-
-	mov xm2,   PTR16I
-
-	; Sync loop to real time.
-	; x3: Real time counter (93.75Hz)
-	; Note that the fadeout depends on the system's performance: on a
-	; faster RRPGE implementation it will fade out faster until reaching
-	; 40 FPS. On the minimal implementation at about 15 FPS is realized.
+	mov x0,    [0x1E0C]	; Audio DMA sample counter (48KHz)
+	shr x0,    10
 
 lmaiw:	jsv {kc_dly_delay, 0xFFFF}
-lmain:	mov c,     [auitc]
-	xne c,     x3
-	jmr lmaiw		; (Unlikely... The rotozoom is slow)
-	mov x3,    c
+lmain:	mov a,     [0x1E05]
+	xbc a,     0		; Wait for FIFO empty
+	jmr lmaiw
+	mov a,     [0x1E0C]
+	shr a,     10
+	xch x0,    a		; x0: new 47Hz tick, a: old tick value
+	mov b,     x0
+	sub b,     a
+	and b,     0x3F		; Count of ticks since last run
+	add x3,    b
 
 	; Load a value from the large ROPD sine table by x3
 
@@ -197,13 +218,15 @@ lmain:	mov c,     [auitc]
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     8		; 0x00 - 0x80
-	jfa effwave {0, 0, x3, b, 0x2000}
+	jfa effwave {0, x3, b, 0x2002, 4, 400}
 
 	; Run rotozoomer
 
-	mov c,     0		; Reset destination (accelerator increments it away)
-	mov [0x2EF2], c		; Destination whole
-	mov [0x2EF3], c		; Destination fraction
+	mov d,     0x801C	; FIFO: Destination whole
+	mov [0x1E06], d		; (Need to reset destination as the rotozoomer increments it away)
+	mov d,     0x0000
+	mov [0x1E07], d		; Destination whole
+	mov [0x1E07], d		; Destination fraction
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     4		; 0x0000 - 0x0800
@@ -216,21 +239,12 @@ lmain:	mov c,     [auitc]
 	mov d,     x3
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
-	jfa offrzoom {320, 200, d, b}
+	jfa offrzoom {320, 200, d, b, accrg, 400}
 
 	; Main loop ends
 
 	jmr lmain
 
-
-;
-; Audio event (all registers are saved by the kernel)
-;
-
-audio_ev:
-	mov a,     1
-	add [auitc], a
-	rfn
 
 
 ;

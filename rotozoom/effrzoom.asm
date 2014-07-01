@@ -1,6 +1,5 @@
 ;
-; Rotozoom effect using 80 cell (640 pixel in 16 color mode) wide target, and
-; an 1024 x 512 full Video RAM bank source.
+; Rotozoom effect using an 1024 x 512 full Video RAM bank source.
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
@@ -26,15 +25,23 @@ section code
 ; Uses the large sine table from the ROPD (0xE00 - 0xFFF), so rotation is 9
 ; bits.
 ;
-; It keeps reindexing related accelerator options intact, as well as
-; colorkeying, so these should be set up in advance according to the needs.
-; Source high should be set up to select the bank to use. Destination start
-; should be set up to the upper left corner of the target area.
+; It takes accelerator parameters 0x008 - 0x00F from memory (CPU address
+; space). It only forces elements of these if it is necessary for the
+; rotozoom, so it should be set up by the requirements before starting.
+;
+; Destination settings are not altered. They should be set up as needed
+; externally (partly provided in the accelerator parameters). This includes
+; the count of pixels to blit.
+;
+; Note that it just fills the Graphics FIFO up without checking if it is
+; empty first.
 ;
 ; param0: X effect center
 ; param1: Y effect center
 ; param2: Rotation (9 bits)
 ; param3: Zoom (0x100: 1:1, no zooming)
+; param4: Accelerator parameter source offset
+; param5: Number of lines to produce
 ;
 offrzoom:
 
@@ -42,10 +49,10 @@ offrzoom:
 .yc	equ	1		; Y effect center
 .rt	equ	2		; Rotation
 .zm	equ	3		; Zoom
-.xw	equ	4		; X step, whole
-.xf	equ	5		; X step, fraction
-.yw	equ	6		; Y step, whole
-.yf	equ	7		; Y step, fraction
+.acp	equ	4		; Accelerator parameter source
+.lno	equ	5		; Number of lines to produce
+.xh	equ	6		; X effect center high
+.yh	equ	7		; Y effect center high
 .t0h	equ	8		; sin(rt)
 .t0l	equ	9
 .t1h	equ	10		; -sin(rt)
@@ -54,8 +61,6 @@ offrzoom:
 .t2l	equ	13
 .t3h	equ	14		; 1-cos(rt)
 .t3l	equ	15
-.xh	equ	12		; X effect center high (overlaps cos(rt))
-.yh	equ	13		; Y effect center high (overlaps cos(rt))
 
 	mov sp,    32		; Reserve some space on the stack
 
@@ -112,7 +117,7 @@ offrzoom:
 	mov [bp + .t1l], x0	; -sin(rt)
 
 	; Calculate X and Y steps, produce accelerator increment values, and
-	; line step values from these.
+	; line step (post-add) values from these.
 
 	mov x1,    [bp + .t2h]
 	mov x0,    [bp + .t2l]	; cos(rt)
@@ -122,12 +127,16 @@ offrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov [0x2EEC], x3	; X increment on accelerator
-	mov [0x2EED], x2
+	mov c,     0x8018	; X increment on accelerator
+	mov [0x1E06], c
+	mov [0x1E07], x3	; X increment whole
+	mov [0x1E07], x2	; X increment fraction
 	asr c:x1,  1		; 8 - 1; Width of data: 128 cells
 	src x0,    1
-	mov [bp + .yw], x1	; Y step across lines
-	mov [bp + .yf], x0
+	mov c,     0x8014	; Y post-add on accelerator
+	mov [0x1E06], c
+	mov [0x1E07], x1	; Y post-add whole
+	mov [0x1E07], x0	; Y post-add fraction
 	mov x1,    [bp + .t0h]
 	mov x0,    [bp + .t0l]	; sin(rt)
 	mul c:x0,  [bp + .zm]
@@ -136,17 +145,20 @@ offrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov [bp + .xw], x3	; X step across lines
-	mov [bp + .xf], x2
+	mov c,     0x801A	; X post-add on accelerator
+	mov [0x1E06], c
+	mov [0x1E07], x3	; X post-add whole
+	mov [0x1E07], x2	; X post-add fraction
 	mov x3,    0
 	mov x2,    0
 	sub c:x2,  x0		; Negate
 	sbc x3,    x1
 	asr c:x3,  1		; 8 - 1; Width of data: 128 cells
 	src x2,    1
-	mov [0x2EEE], x3	; Y increment on accelerator
-	mov [0x2EEF], x2
-	asr c:x1,  3		; 8 pixels per cell
+	mov c,     0x8012	; Y increment on accelerator
+	mov [0x1E06], c
+	mov [0x1E07], x3	; Y increment whole
+	mov [0x1E07], x2	; Y increment fraction
 
 	; Calculate source start offset. x1:x0 will hold X and b:a will hold Y.
 
@@ -228,44 +240,50 @@ offrzoom:
 	sub c:a,   x2
 	sbc b,     x3
 
-	; Set up accelerator mode and pixel count
-
-	mov x3,    0x2EF8	; Accelerator mode and colorkey
-	mov d,     [x3]
-	sub x3,    1
-	and d,     0xF2FF
-	bts d,     11		; Scaled blit
-	mov [x3],  d
-	mov d,     640
-	mov [x3],  d
-
-	; Set up source split mask and partitioning
-
-	mov d,     0x007F	; 1024x512 source
-	mov [0x2EFC], d
-	mov d,     0x8000	; Source partition size: 64K * 32bits
-	or  [0x2EF7], d
-	mov d,     0x0007	; Destination partition size: 64K * 32bits
-	mov [0x2EE2], d
-
-	; Prepare x2 for writing accelerator start
+	; Submit source start to the accelerator
 
 	mov xm2,   PTR16
-	mov x2,    0x2EFF
+	mov x2,    0x1E07	; FIFO data receive offset. Will save some words below.
+	mov c,     0x8010	; Source Y whole
+	mov [0x1E06], c
+	mov [x2],  b		; Whole
+	mov [x2],  a		; Fraction
+	mov c,     0x8016	; Source X whole
+	mov [0x1E06], c
+	mov [x2],  x1		; Whole
+	mov [x2],  x0		; Fraction
 
-	; Everything prepared, output 400 accelerator lines
+	; Walk through the 8 provided accelerator register values, and submit
+	; them to the accelerator after altering as needed.
 
-	mov d,     400
-.loop:	mov x3,    0x2EE8	; Source X & Y pointers
-	mov [x3],  x1		; This will block until completing prev. line
-	mov [x3],  x0
-	mov [x3],  b
-	mov [x3],  a
-	mov [x2],  d		; Just start it (written value is irrevelant)
-	add c:x0,  [bp + .xf]
-	adc x1,    [bp + .xw]
-	add c:a,   [bp + .yf]
-	adc b,     [bp + .yw]
+	mov c,     0x8008
+	mov [0x1E06], c		; FIFO address
+	mov x3,    [bp + .acp]	; x3 is in 16 bit incremental mode
+	mov a,     [x3]
+	mov [x2],  a		; Source partition select bits are not used, bank select used.
+	mov a,     [x3]
+	mov [x2],  a		; Destination partition select bits are not used, bank select used.
+	mov a,     [x3]
+	mov [x2],  a		; Reindexing & destination increment used as-is.
+	mov a,     [x3]
+	and a,     0x00FF	; Source partition size & X/Y split masked off
+	or  a,     0xF600	; Source partition size is 64K cells, split is at 128 cells
+	mov [x2],  a
+	mov a,     [x3]
+	mov [x2],  a		; Masks used as-is.
+	mov a,     [x3]
+	and a,     0x33FF	; Clear post-add and mode settings
+	or  a,     0x0800	; Set scaled blitter
+	mov [x2],  a
+	mov a,     [x3]
+	mov [x2],  a		; Count used as-is.
+
+	; Everything prepared, output accelerator lines
+
+	mov d,     [bp + .lno]
+	mov c,     0x800F	; Accelerator start register
+.loop:	mov [0x1E06], c		; Set accelerator start
+	mov [x2],  c		; Written data is irrelevant, FIFO starts, accelerator blits
 	sub d,     1
 	xeq d,     0
 	jmr .loop
