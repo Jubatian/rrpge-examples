@@ -185,24 +185,24 @@ rlop:	mov a,     [x3]
 	mov [x2],  a
 
 	; Enter main loop. The real time synchronization is based on the audio
-	; counter, running at 48KHz. It is (software) divided by 1024 to get a
-	; roughly 47Hz base tick. x3 will keep track of this, while x0 will
-	; keep track of 47Hz ticks.
+	; counter, running at 48KHz. It is (software) divided by 512 to get a
+	; roughly 94Hz base tick. x3 will keep track of this, while x0 will
+	; keep track of 94Hz ticks.
 
 	mov x3,    0x240	; Looks good for start
 	mov x0,    [0x1E0C]	; Audio DMA sample counter (48KHz)
-	shr x0,    10
+	shr x0,    9
 
 lmaiw:	jsv {kc_dly_delay, 0xFFFF}
 lmain:	mov a,     [0x1E05]
 	xbc a,     0		; Wait for FIFO empty
 	jmr lmaiw
 	mov a,     [0x1E0C]
-	shr a,     10
+	shr a,     9
 	xch x0,    a		; x0: new 47Hz tick, a: old tick value
 	mov b,     x0
 	sub b,     a
-	and b,     0x3F		; Count of ticks since last run
+	and b,     0x7F		; Count of ticks since last run
 	add x3,    b
 
 	; Load a value from the large ROPD sine table by x3
