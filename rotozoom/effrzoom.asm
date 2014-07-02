@@ -281,10 +281,8 @@ offrzoom:
 	; Everything prepared, output accelerator lines
 
 	mov d,     [bp + .lno]
-	mov c,     0x800F	; Accelerator start register
-.loop:	mov [0x1E06], c		; Set accelerator start
-	mov [x2],  c		; Written data is irrelevant, FIFO starts, accelerator blits
-	sub d,     1
+.loop:	mov [x2],  c		; Written data is irrelevant, FIFO starts, accelerator blits
+	sub d,     1		; (Note: FIFO no longer increments ptr. from here)
 	xeq d,     0
 	jmr .loop
 

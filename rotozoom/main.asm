@@ -22,7 +22,7 @@ section cons
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
 	db "\nVersion: 00.000.003"
-	db "\nEngSpec: 00.007.001"
+	db "\nEngSpec: 00.007.003"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -151,11 +151,9 @@ ldls:	mov [x3],  a
 	mov [x2],  a
 	mov a,     640		; Output 640 4bit pixels in a line
 	mov [x2],  a
-	mov c,     0x800F	; Accelerator start trigger
 	mov b,     400		; 400 lines
-cplp0:	mov [0x1E06], c
-	mov [x2],  a		; Fire accelerator (written value irrelevant)
-	sub b,     1
+cplp0:	mov [x2],  a		; Fire accelerator (written value irrelevant)
+	sub b,     1		; (Note: FIFO no longer increments ptr. from here)
 	xeq b,     0
 	jmr cplp0
 
@@ -222,11 +220,6 @@ lmain:	mov a,     [0x1E05]
 
 	; Run rotozoomer
 
-	mov d,     0x801C	; FIFO: Destination whole
-	mov [0x1E06], d		; (Need to reset destination as the rotozoomer increments it away)
-	mov d,     0x0000
-	mov [0x1E07], d		; Destination whole
-	mov [0x1E07], d		; Destination fraction
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     4		; 0x0000 - 0x0800
@@ -240,6 +233,14 @@ lmain:	mov a,     [0x1E05]
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
 	jfa offrzoom {320, 200, d, b, accrg, 400}
+
+	; Reset destination after the rotozoomer
+
+	mov d,     0x801C	; FIFO: Destination whole
+	mov [0x1E06], d
+	mov d,     0x0000
+	mov [0x1E07], d		; Destination whole
+	mov [0x1E07], d		; Destination fraction
 
 	; Main loop ends
 
