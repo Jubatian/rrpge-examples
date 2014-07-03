@@ -19,8 +19,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Mouse            "
-	db "\nVersion: 00.000.002"
-	db "\nEngSpec: 00.005.000"
+	db "\nVersion: 00.000.003"
+	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -32,11 +32,6 @@ org 0xBC0
 
 
 section code
-
-	; Switch to 8 bit mode (it is simpler since there are only 64000
-	; pixels to address).
-
-	jsv {kc_vid_mode, 1}
 
 	; x3 will be used as pointer into the graphics memory, simply using
 	; the default layout.

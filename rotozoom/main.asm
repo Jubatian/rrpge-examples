@@ -21,8 +21,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.003"
-	db "\nEngSpec: 00.007.003"
+	db "\nVersion: 00.000.004"
+	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -62,12 +62,12 @@ reimp:				; Reindex map (darkening when source is darker)
 reimp_end:
 
 accrg:				; 8 accelerator registers for rotozoom
-	dw 0x0001		; Source bank: 1, partition irrelevant.
-	dw 0x0000		; Destination bank: 0, partition irrelevant.
-	dw 0x0000		; Dest. incr: 1, reindex bank irrelevant (by destination).
 	dw 0x00F0		; Source partition, X/Y split irrelevant, destination full.
+	dw 0x0000		; Reindex bank irrelevant (by destination).
+	dw 0x0000		; Substitutions irrelevant, no barrel rotation.
 	dw 0x00FF		; Source masks: no effect (OR: clear, AND: set).
 	dw 0x3000		; Reindex by destination mode, no colorkey.
+	dw 400			; 400 lines.
 	dw 640			; One line takes 640 4bit pixels.
 	dw 0x0000		; Trigger: value irrelevant.
 
@@ -78,24 +78,17 @@ section code
 
 	jsv {kc_vid_mode, 0}
 
-	; Use the Graphics FIFO to turn off double scanned mode in the
-	; Graphics Display Generator's register 0x002.
+	; Turn off double scanned mode.
 
 	mov a,     0x5000	; Keep output width at 80 cells (not used here)
-	mov b,     0x8002	; Graphics reg. write + 0x002 command
-	mov [0x1E06], b		; Write command
-	mov [0x1E07], a		; Write data, this will trigger a store
-	mov [0x1E05], a		; Graphics FIFO start trigger (value ignored)
-gfwa:	mov a,     [0x1E05]
-	xbc a,     0		; Wait for the FIFO to become empty
-	jmr gfwa		; So the graphics may be accessed
+	mov [0x1E04], a
 
 	; Set up display list for 400 image lines. Will use entry 1 of the
 	; list for this.
 
 	mov xm3,   PTR16I
-	mov a,     0x4000	; High part of the display list entry
-	mov b,     0x8000	; Low part of the display list entry
+	mov a,     0x0000	; High part of the display list entry
+	mov b,     0xC000	; Low part of the display list entry
 	mov x3,    0x2002	; Points to the list, first line, entry 1
 ldls:	mov [x3],  a
 	mov [x3],  b
@@ -112,9 +105,9 @@ ldls:	mov [x3],  a
 	; surface suitable for the rotozoomer. Uses the Accelerator for it.
 
 	mov xm2,   PTR16
-	mov x2,    0x1E07	; FIFO data write offset
+	mov x2,    0x1E03	; FIFO data write offset
 	mov c,     0x8016	; FIFO: Accelerator X pointers & increments
-	mov [0x1E06], c
+	mov [0x1E02], c
 	mov a,     0x0000	; Source X whole
 	mov [x2],  a
 	mov a,     0x0000	; Source X fraction
@@ -131,55 +124,61 @@ ldls:	mov [x3],  a
 	mov [x2],  a
 	mov a,     0x0000	; Destination fraction
 	mov [x2],  a
-	mov a,     0x0080	; Destination post-add whole
+	mov a,     0x0001	; Destination increment
 	mov [x2],  a
-	mov a,     0x0000	; Destination post-add fraction
+	mov a,     0x0080	; Destination post-add
 	mov [x2],  a
-	mov c,     0x8008	; FIFO: Acc. source bank & partition select
-	mov [0x1E06], c
+	mov c,     0x8006	; FIFO: Acc. source bank & partition select
+	mov [0x1E02], c
 	mov a,     0x0000	; Source bank: 0, partition select unused.
 	mov [x2],  a
 	mov a,     0x0001	; Destination bank: 1. partition select unused.
 	mov [x2],  a
-	mov a,     0x0000	; No reindexing, dest. increment is 1
-	mov [x2],  a
 	mov a,     0xFFF0	; Partition sizes & X/Y split: all full (only X used)
+	mov [x2],  a
+	mov a,     0x0000	; No reindexing
+	mov [x2],  a
+	mov a,     0x0000	; No substitutions or barrel rotate
 	mov [x2],  a
 	mov a,     0x00FF	; Source masks
 	mov [x2],  a
 	mov a,     0x0000	; Mode: Plain Block Blitter, no reindex, no colorkey
 	mov [x2],  a
+	mov a,     400		; Output 400 lines
+	mov [x2],  a
 	mov a,     640		; Output 640 4bit pixels in a line
 	mov [x2],  a
-	mov b,     400		; 400 lines
-cplp0:	mov [x2],  a		; Fire accelerator (written value irrelevant)
-	sub b,     1		; (Note: FIFO no longer increments ptr. from here)
-	xeq b,     0
-	jmr cplp0
+	mov [x2],  a		; Fire accelerator (written value irrelevant)
 
 	; Accelerator is copying stuff. Meanwhile set up reindexing table,
 	; also through the Graphics FIFO.
 
 	mov xm3,   PTR16I
 	mov x3,    reimp
-	mov c,     0x8100	; First reindex register
-	mov [0x1E06], c
+	mov c,     0x0100	; First reindex register
+	mov [0x1E02], c
 rlop:	mov a,     [x3]
 	mov [x2],  a
 	xeq x3,    reimp_end
 	jmr rlop
 
-	; Set up the Accelerator for the rotozoomer: destination props.
+	; Set up the Accelerator for the rotozoomer
 
-	mov c,     0x801C	; FIFO: Destination whole
-	mov [0x1E06], c
+	mov c,     0x06		; FIFO: Source bank & partition select
+	mov [0x1E02], c
+	mov a,     0x0001	; Source bank & partition select
+	mov [x2],  a
+	mov a,     0x0000	; Destination bank & partition select
+	mov [x2],  a
+	mov c,     0x1C		; FIFO: Destination whole
+	mov [0x1E02], c
 	mov a,     0x0000	; Destination whole
 	mov [x2],  a
 	mov a,     0x0000	; Destination fraction
 	mov [x2],  a
-	mov a,     0x0050	; Destination post-add whole
+	mov a,     0x0001	; Destination increment
 	mov [x2],  a
-	mov a,     0x0000	; Destination post-add fraction
+	mov a,     0x0050	; Destination post-add
 	mov [x2],  a
 
 	; Enter main loop. The real time synchronization is based on the audio
@@ -188,14 +187,14 @@ rlop:	mov a,     [x3]
 	; keep track of 94Hz ticks.
 
 	mov x3,    0x240	; Looks good for start
-	mov x0,    [0x1E0C]	; Audio DMA sample counter (48KHz)
+	mov x0,    [0x1F0C]	; Audio DMA sample counter (48KHz)
 	shr x0,    9
 
 lmaiw:	jsv {kc_dly_delay, 0xFFFF}
-lmain:	mov a,     [0x1E05]
+lmain:	mov a,     [0x1E01]
 	xbc a,     0		; Wait for FIFO empty
 	jmr lmaiw
-	mov a,     [0x1E0C]
+	mov a,     [0x1F0C]
 	shr a,     9
 	xch x0,    a		; x0: new 47Hz tick, a: old tick value
 	mov b,     x0
@@ -232,15 +231,7 @@ lmain:	mov a,     [0x1E05]
 	mov d,     x3
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
-	jfa offrzoom {320, 200, d, b, accrg, 400}
-
-	; Reset destination after the rotozoomer
-
-	mov d,     0x801C	; FIFO: Destination whole
-	mov [0x1E06], d
-	mov d,     0x0000
-	mov [0x1E07], d		; Destination whole
-	mov [0x1E07], d		; Destination fraction
+	jfa offrzoom {320, 200, d, b, accrg}
 
 	; Main loop ends
 

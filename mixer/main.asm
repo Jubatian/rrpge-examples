@@ -18,8 +18,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Mixer            "
-	db "\nVersion: 00.000.001"
-	db "\nEngSpec: 00.007.001"
+	db "\nVersion: 00.000.002"
+	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -132,7 +132,7 @@ lpx:	mov c,     a
 	; the operations.
 
 	mov a,     0x6669	; Destination: 2K samples, rest: 256 samples.
-	mov [0x1ED7], a
+	mov [0x1F17], a
 
 lmain:	; Run sample generation
 
@@ -186,7 +186,7 @@ mixer:
 	; Determine whether refilling is necessary
 
 	mov d,     [mix_pt]	; Old pointer (0x0000 or 0x0800)
-	mov a,     [0x1E0C]
+	mov a,     [0x1F0C]
 	and a,     0x0800	; Which half the DMA sample pointer is in?
 	xne a,     d
 	jmr .exit		; If equal, nothing to do.
@@ -204,7 +204,7 @@ mixer:
 
 	; Sample 0
 
-	mov x3,    0x1ED8	; Mixer, Destination pointer
+	mov x3,    0x1F18	; Mixer, Destination pointer
 	mov x2,    mix_p0	; Sample offsets (load)
 	mov x1,    mix_s0	; Sample offsets (save)
 	mov [x3],  d
@@ -234,7 +234,7 @@ mixer:
 	mov [x3],  a
 	sub x3,    1		; Trigger once more to get 2048 samples
 	mov [x3],  a
-	mov x3,    0x1EDC	; Mixer, sample offset whole
+	mov x3,    0x1F1C	; Mixer, sample offset whole
 	mov a,     [x3]		; Save new offsets to continue later
 	mov [x1],  a
 	mov a,     [x3]
@@ -242,7 +242,7 @@ mixer:
 
 	; Sample 1
 
-	mov x3,    0x1ED8	; Mixer, Destination pointer
+	mov x3,    0x1F18	; Mixer, Destination pointer
 	mov x2,    mix_p1	; Sample offsets (load)
 	mov x1,    mix_s1	; Sample offsets (save)
 	mov [x3],  d
@@ -272,7 +272,7 @@ mixer:
 	mov [x3],  a
 	sub x3,    1		; Trigger once more to get 2048 samples
 	mov [x3],  a
-	mov x3,    0x1EDC	; Mixer, sample offset whole
+	mov x3,    0x1F1C	; Mixer, sample offset whole
 	mov a,     [x3]		; Save new offsets to continue later
 	mov [x1],  a
 	mov a,     [x3]

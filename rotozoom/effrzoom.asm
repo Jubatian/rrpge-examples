@@ -27,11 +27,10 @@ section code
 ;
 ; It takes accelerator parameters 0x008 - 0x00F from memory (CPU address
 ; space). It only forces elements of these if it is necessary for the
-; rotozoom, so it should be set up by the requirements before starting.
+; rotozoom, so it should be set up by the requirements before starting,
+; including the counts.
 ;
-; Destination settings are not altered. They should be set up as needed
-; externally (partly provided in the accelerator parameters). This includes
-; the count of pixels to blit.
+; Registers 0x004 - 0x007 and 0x01C - 0x01F (destination) are not modified.
 ;
 ; Note that it just fills the Graphics FIFO up without checking if it is
 ; empty first.
@@ -41,7 +40,6 @@ section code
 ; param2: Rotation (9 bits)
 ; param3: Zoom (0x100: 1:1, no zooming)
 ; param4: Accelerator parameter source offset
-; param5: Number of lines to produce
 ;
 offrzoom:
 
@@ -50,7 +48,6 @@ offrzoom:
 .rt	equ	2		; Rotation
 .zm	equ	3		; Zoom
 .acp	equ	4		; Accelerator parameter source
-.lno	equ	5		; Number of lines to produce
 .xh	equ	6		; X effect center high
 .yh	equ	7		; Y effect center high
 .t0h	equ	8		; sin(rt)
@@ -127,16 +124,16 @@ offrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov c,     0x8018	; X increment on accelerator
-	mov [0x1E06], c
-	mov [0x1E07], x3	; X increment whole
-	mov [0x1E07], x2	; X increment fraction
+	mov c,     0x18		; X increment on accelerator
+	mov [0x1E02], c
+	mov [0x1E03], x3	; X increment whole
+	mov [0x1E03], x2	; X increment fraction
 	asr c:x1,  1		; 8 - 1; Width of data: 128 cells
 	src x0,    1
-	mov c,     0x8014	; Y post-add on accelerator
-	mov [0x1E06], c
-	mov [0x1E07], x1	; Y post-add whole
-	mov [0x1E07], x0	; Y post-add fraction
+	mov c,     0x14		; Y post-add on accelerator
+	mov [0x1E02], c
+	mov [0x1E03], x1	; Y post-add whole
+	mov [0x1E03], x0	; Y post-add fraction
 	mov x1,    [bp + .t0h]
 	mov x0,    [bp + .t0l]	; sin(rt)
 	mul c:x0,  [bp + .zm]
@@ -145,20 +142,20 @@ offrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov c,     0x801A	; X post-add on accelerator
-	mov [0x1E06], c
-	mov [0x1E07], x3	; X post-add whole
-	mov [0x1E07], x2	; X post-add fraction
+	mov c,     0x1A		; X post-add on accelerator
+	mov [0x1E02], c
+	mov [0x1E03], x3	; X post-add whole
+	mov [0x1E03], x2	; X post-add fraction
 	mov x3,    0
 	mov x2,    0
 	sub c:x2,  x0		; Negate
 	sbc x3,    x1
 	asr c:x3,  1		; 8 - 1; Width of data: 128 cells
 	src x2,    1
-	mov c,     0x8012	; Y increment on accelerator
-	mov [0x1E06], c
-	mov [0x1E07], x3	; Y increment whole
-	mov [0x1E07], x2	; Y increment fraction
+	mov c,     0x12		; Y increment on accelerator
+	mov [0x1E02], c
+	mov [0x1E03], x3	; Y increment whole
+	mov [0x1E03], x2	; Y increment fraction
 
 	; Calculate source start offset. x1:x0 will hold X and b:a will hold Y.
 
@@ -243,13 +240,13 @@ offrzoom:
 	; Submit source start to the accelerator
 
 	mov xm2,   PTR16
-	mov x2,    0x1E07	; FIFO data receive offset. Will save some words below.
-	mov c,     0x8010	; Source Y whole
-	mov [0x1E06], c
+	mov x2,    0x1E03	; FIFO data receive offset. Will save some words below.
+	mov c,     0x10		; Source Y whole
+	mov [0x1E02], c
 	mov [x2],  b		; Whole
 	mov [x2],  a		; Fraction
-	mov c,     0x8016	; Source X whole
-	mov [0x1E06], c
+	mov c,     0x16		; Source X whole
+	mov [0x1E02], c
 	mov [x2],  x1		; Whole
 	mov [x2],  x0		; Fraction
 
@@ -257,34 +254,28 @@ offrzoom:
 	; them to the accelerator after altering as needed.
 
 	mov c,     0x8008
-	mov [0x1E06], c		; FIFO address
+	mov [0x1E02], c		; FIFO address
 	mov x3,    [bp + .acp]	; x3 is in 16 bit incremental mode
-	mov a,     [x3]
-	mov [x2],  a		; Source partition select bits are not used, bank select used.
-	mov a,     [x3]
-	mov [x2],  a		; Destination partition select bits are not used, bank select used.
-	mov a,     [x3]
-	mov [x2],  a		; Reindexing & destination increment used as-is.
 	mov a,     [x3]
 	and a,     0x00FF	; Source partition size & X/Y split masked off
 	or  a,     0xF600	; Source partition size is 64K cells, split is at 128 cells
 	mov [x2],  a
 	mov a,     [x3]
+	mov [x2],  a		; Reindexing used as-is.
+	mov a,     [x3]
+	and a,     0x1FFF	; Dont substitue anything, but keep barrel rotate setting.
+	mov [x2],  a
+	mov a,     [x3]
 	mov [x2],  a		; Masks used as-is.
 	mov a,     [x3]
-	and a,     0x33FF	; Clear post-add and mode settings
+	and a,     0xF3FF	; Clear mode setting
 	or  a,     0x0800	; Set scaled blitter
 	mov [x2],  a
 	mov a,     [x3]
-	mov [x2],  a		; Count used as-is.
-
-	; Everything prepared, output accelerator lines
-
-	mov d,     [bp + .lno]
-.loop:	mov [x2],  c		; Written data is irrelevant, FIFO starts, accelerator blits
-	sub d,     1		; (Note: FIFO no longer increments ptr. from here)
-	xeq d,     0
-	jmr .loop
+	mov [x2],  a		; Row count used as-is.
+	mov a,     [x3]
+	mov [x2],  a		; Pixel count used as-is.
+	mov [x2],  a		; FIFO starts, accelerator blits
 
 	; Restore CPU registers
 

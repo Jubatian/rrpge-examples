@@ -23,8 +23,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Binary data      "
-	db "\nVersion: 00.000.002"
-	db "\nEngSpec: 00.007.001"
+	db "\nVersion: 00.000.003"
+	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -45,23 +45,16 @@ lpal:	jsv {kc_vid_setpal, x3, [x3]}
 	xeq x3,    0x200
 	jmr lpal
 
-	; Use the Graphics FIFO to turn off double scanned mode in the
-	; Graphics Display Generator's register 0x002.
+	; Turn off double scanned mode.
 
 	mov a,     0x5000	; Keep output width at 80 cells (not used here)
-	mov b,     0x8002	; Graphics reg. write + 0x002 command
-	mov [0x1E06], b		; Write command
-	mov [0x1E07], a		; Write data, this will trigger a store
-	mov [0x1E05], a		; Graphics FIFO start trigger (value ignored)
-gfwa:	mov a,     [0x1E05]
-	xbc a,     0		; Wait for the FIFO to become empty
-	jmr gfwa		; So the graphics may be accessed
+	mov [0x1E04], a
 
 	; Set up display list for 400 image lines. Will use entry 1 of the
 	; list for this.
 
-	mov a,     0x4000	; High part of the display list entry
-	mov b,     0x8000	; Low part of the display list entry
+	mov a,     0x0000	; High part of the display list entry
+	mov b,     0xC000	; Low part of the display list entry
 	mov x3,    0x2002	; Points to the list, first line, entry 1
 ldls:	mov [x3],  a
 	mov [x3],  b
