@@ -22,7 +22,7 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: GDG sprites      "
-	db "\nVersion: 00.000.001"
+	db "\nVersion: 00.000.002"
 	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
@@ -88,7 +88,7 @@ membl:	jsv {kc_mem_banksame, a, b}
 	jfa gdgsprit_init {sprt_data, sprt_list, gconf}
 	jfa renderbars {rasps, rbars}
 	jfa renderrows {rowps}
-	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 0, 40, 230, 0}
+	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 0, 40, 0}
 	jfa rendertext {colps, txt0}
 	jfa gdgsprit_frame {sprt_data, sprt_list, gconf}
 
@@ -142,7 +142,7 @@ lmain:	mov a,     [0x1F0C]
 	jfa gdgsprit_reset {sprt_data, sprt_list}
 	jfa renderbars {rasps, rbars}
 	jfa renderrows {rowps}
-	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 0, 40, 230, 0}
+	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 0, 40, 0}
 	jfa rendertext {colps, txt0}
 	jfa gdgsprit_frame {sprt_data, sprt_list, gconf}
 
@@ -366,7 +366,7 @@ renderrows:
 .lp:	mov b,     [x3]
 	and b,     0x03FF	; Low 10 bits are position
 	or  b,     0x8000
-	jfa gdgsprit_add {sprt_data, sprt_list, a, b, d, 16, 0}
+	jfa gdgsprit_add {sprt_data, sprt_list, a, b, 16, 0, d}
 	add a,     16
 	add d,     16
 	sub c,     1
@@ -429,7 +429,7 @@ rendertext:
 	xne a,     0		; Nonzero: need to create sprite for it
 	jmr .nsp
 	add x0,    b
-	jfa gdgsprit_addsprite {sprt_data, sprt_list, a, 0x8000, x1, x0, 16, 0}
+	jfa gdgsprit_addsprite {sprt_data, sprt_list, a, 0x8000, 16, 0, x0, x1}
 .nsp:	add x1,    20		; X position
 	sub c,     1
 	xeq c,     0

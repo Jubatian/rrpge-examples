@@ -147,9 +147,9 @@ gdgsprit_init:
 ; param1: Offset of Display List (size depends on requested config.)
 ; param2: Render command high word
 ; param3: Render command low word
-; param4: Y position (signed 2's complement, can be partly off-screen)
-; param5: Height in lines
-; param6: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param4: Height in lines
+; param5: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param6: Y position (signed 2's complement, can be partly off-screen)
 ;
 gdgsprit_add:
 
@@ -157,10 +157,11 @@ gdgsprit_add:
 .ofd	equ	1		; Display list offset
 .rch	equ	2		; Render command, high
 .rcl	equ	3		; Render command, low
-.psy	equ	4		; Y position
-.hgt	equ	5		; Height
-.btp	equ	6		; Bottom / top add select
+.hgt	equ	4		; Height
+.btp	equ	5		; Bottom / top add select
+.psy	equ	6		; Y position
 .esz	equ	0		; Display list entry size in words
+.end	equ	1		; Loop termination value
 
 	mov sp,    17
 
@@ -177,22 +178,29 @@ gdgsprit_add:
 	mov [bp + 15], x0
 	mov [bp + 16], xh
 
+	; Set up pointer modes:
+	; xm0: PTR8I  (0x8)
+	; xm1: PTR8I  (0x8)
+	; xm2: PTR8I  (0x8)
+	; xm3: PTR16I (0x6)
+
+.entr:	mov xm,    0x6888
+
 	; Load the source width multiplier so to know how many to add to the
 	; source line select to advance one line. The multiplier stays one if
 	; the source is a shift source (multiplier ignored).
 
-	mov xm3,   PTR16I
 	mov x3,    [bp + .rch]
 	shr x3,    12
 	and x3,    7		; Source definition select
 	add x3,    0x1E08
 	mov a,     [x3]		; Load source definition
-	mov x2,    a
-	shr x2,    2
-	and x2,    6		; Multiplier: 0, 2, 4, 6
-	add x2,    1		; Multiplier: 1, 3, 5, 7
+	mov d,     a
+	shr d,     2
+	and d,     6		; Multiplier: 0, 2, 4, 6
+	add d,     1		; Multiplier: 1, 3, 5, 7
 	xbc a,     5
-	mov x2,    1		; Shift source: multiplier is 1
+	mov d,     1		; Shift source: multiplier is 1
 
 	; Clip the graphics component if needed. If partial from the top, the
 	; render command itself also alters so respecting the first visible
@@ -208,7 +216,7 @@ gdgsprit_add:
 	sub [bp + .hgt], a	; New height
 	xbc [bp + .hgt], 15
 	jmr .exit		; Turned negative: off screen to the top
-	mul a,     x2		; For new source line select
+	mul a,     d		; For new source line select
 	add [bp + .rch], a	; OK, new source start calculated
 	mov a,     0
 	mov [bp + .psy], a	; New Y start
@@ -227,8 +235,6 @@ gdgsprit_add:
 	; added (the list is full). Otherwise add to the appropriate end, and
 	; increment (bottom end) / decrement (top end) the pointer.
 
-	mov xm0,   PTR8
-	mov xm1,   PTR8
 	mov x0,    [bp + .ofi]	 ; Calculate bottom / top end start offsets
 	shl c:x0,  1
 	mov xh0,   c
@@ -245,13 +251,13 @@ gdgsprit_add:
 	mov [bp + .esz], b
 	mul b,     [bp + .psy]
 	add b,     [bp + .ofd]	; Base offset in display list, for the line
-	mov d,     [bp + .hgt]
+	add [bp + .hgt], x0	; Loop termination condition using the x0 offset
 	mov c,     2		; Prepare for offset increments / decrements
 
 	xbs [bp + .btp], 0
 	jmr .abt		; Add to bottom
 
-.atp:	mov xm0,   PTR8I	; Add to top
+.atp:	mov x2,    x1
 	sub b,     2		; Alter base offset to get the right pointers
 .lt:	mov x3,    [x1]
 	xne x3,    [x0]
@@ -261,16 +267,14 @@ gdgsprit_add:
 	mov [x3],  a
 	mov a,     [bp + .rcl]
 	mov [x3],  a
-	sub [x1],  c		; Decremented bottom offset
-.lte:	add [bp + .rch], x2	; Add to source line select for the next line
+	sub [x2],  c		; Decremented bottom offset
+.lte:	add [bp + .rch], d	; Add to source line select for the next line
 	add b,     [bp + .esz]	; To next line in display list
-	add x1,    1		; To next line in pointer list
-	sub d,     1
-	xeq d,     0		; End of sprite
+	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lt
 	jmr .exit
 
-.abt:	mov xm1,   PTR8I	; Add to bottom
+.abt:	mov x2,    x0
 .lb:	mov x3,    [x0]
 	xne x3,    [x1]
 	jmr .lbe		; Equal offsets: no more space remained.
@@ -279,12 +283,10 @@ gdgsprit_add:
 	mov [x3],  a
 	mov a,     [bp + .rcl]
 	mov [x3],  a
-	add [x0],  c		; Incremented bottom offset
-.lbe:	add [bp + .rch], x2	; Add to source line select for the next line
+	add [x2],  c		; Incremented bottom offset
+.lbe:	add [bp + .rch], d	; Add to source line select for the next line
 	add b,     [bp + .esz]	; To next line in display list
-	add x0,    1		; To next line in pointer list
-	sub d,     1
-	xeq d,     0		; End of sprite
+	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lb
 
 	; Restore CPU regs & exit
@@ -318,10 +320,10 @@ gdgsprit_add:
 ; param1: Offset of Display List (size depends on requested config.)
 ; param2: Render command high word
 ; param3: Render command low word
-; param4: X position (signed 2's complement, can be partly off-screen)
-; param5: Y position (signed 2's complement, can be partly off-screen)
-; param6: Height in lines
-; param7: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param4: Height in lines
+; param5: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param6: Y position (signed 2's complement, can be partly off-screen)
+; param7: X position (signed 2's complement, can be partly off-screen)
 ;
 gdgsprit_addsprite:
 
@@ -329,26 +331,31 @@ gdgsprit_addsprite:
 .ofd	equ	1		; Display list offset
 .rch	equ	2		; Render command, high
 .rcl	equ	3		; Render command, low
-.psx	equ	4		; X position
-.psy	equ	5		; Y position
-.hgt	equ	6		; Height
-.btp	equ	7		; Bottom / top add select
+.hgt	equ	4		; Height
+.btp	equ	5		; Bottom / top add select
+.psy	equ	6		; Y position
+.psx	equ	7		; X position
 
-	mov sp,    12
+	mov sp,    17
 
 	; Save CPU regs
 
-	mov [bp +  8], a
-	mov [bp +  9], b
-	mov [bp + 10], xm
-	mov [bp + 11], x3
+	xch [bp +  7], a	; Load X position in 'a' while saving
+	mov [bp +  8], b
+	mov [bp +  9], c
+	mov [bp + 10], d
+	mov [bp + 11], xm
+	mov [bp + 12], x3
+	mov [bp + 13], x2
+	mov [bp + 14], x1
+	mov [bp + 15], x0
+	mov [bp + 16], xh
 
 	; Check X position, determine if the sprite should be displayed or
 	; not.
 
-	mov a,     [bp + .psx]
-	xug 640,   a
-	jmr .exit		; Off-screen to the right
+	xug 640,   a		; Off-screen to the right
+	jmr gdgsprit_add.exit
 	xbs a,     15		; Only calculate a mess if partly off on the left
 	jmr .onsc
 	mov xm3,   PTR16
@@ -368,24 +375,16 @@ gdgsprit_addsprite:
 	shl x3,    3		; Total width in 4 bit pixels
 	add a,     x3
 	xsg a,     0		; 1 or more (signed): sprite is on-screen
-	jmr .exit
+	jmr gdgsprit_add.exit
 	sub a,     x3		; Restore .psx
 
 	; Sprite on screen, render it
 
 .onsc:	and a,     0x03FF	; 10 bits for shift / position
-	mov b,     [bp + .rcl]
-	and b,     0xFC00
-	or  a,     b		; Created .rcl (render command low) to send
-	jfa gdgsprit_add {[bp + .ofi], [bp + .ofd], [bp + .rch], a, [bp + .psy], [bp + .hgt], [bp + .btp]}
-
-	; Restore CPU regs & exit
-
-.exit:	mov a,     [bp +  8]
-	mov b,     [bp +  9]
-	mov xm,    [bp + 10]
-	mov x3,    [bp + 11]
-	rfn
+	mov b,     0xFC00
+	and [bp + .rcl], b
+	or  [bp + .rcl], a
+	jmr gdgsprit_add.entr
 
 
 
@@ -402,18 +401,18 @@ gdgsprit_addsprite:
 ; param0: Offset of 512 word internal object data.
 ; param1: Offset of Display List (size depends on requested config.)
 ; param2: Render command list offset
-; param3: Y position (signed 2's complement, can be partly off-screen)
-; param4: Height in lines
-; param5: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param3: Height in lines
+; param4: 0: add to bottom; 1: add to top (only lowest bit effective)
+; param5: Y position (signed 2's complement, can be partly off-screen)
 ;
 gdgsprit_addlist:
 
 .ofi	equ	0		; Internal object data offset
 .ofd	equ	1		; Display list offset
 .orc	equ	2		; Render command list offset
-.psy	equ	3		; Y position
-.hgt	equ	4		; Height
-.btp	equ	5		; Bottom / top add select
+.hgt	equ	3		; Height
+.btp	equ	4		; Bottom / top add select
+.psy	equ	5		; Y position
 .esz	equ	0		; Display list entry size in words
 
 	mov sp,    16
@@ -430,6 +429,14 @@ gdgsprit_addlist:
 	mov [bp + 13], x1
 	mov [bp + 14], x0
 	mov [bp + 15], xh
+
+	; Set up pointer modes:
+	; xm0: PTR8I  (0x8)
+	; xm1: PTR8I  (0x8)
+	; xm2: PTR16I (0x6)
+	; xm3: PTR16I (0x6)
+
+	mov xm,    0x6688
 
 	; Clip the graphics component if needed. If partial from the top, the
 	; render command itself also alters so respecting the first visible
@@ -464,8 +471,6 @@ gdgsprit_addlist:
 	; added (the list is full). Otherwise add to the appropriate end, and
 	; increment (bottom end) / decrement (top end) the pointer.
 
-	mov xm0,   PTR8
-	mov xm1,   PTR8
 	mov x0,    [bp + .ofi]	 ; Calculate bottom / top end start offsets
 	shl c:x0,  1
 	mov xh0,   c
@@ -482,16 +487,14 @@ gdgsprit_addlist:
 	mov [bp + .esz], b
 	mul b,     [bp + .psy]
 	add b,     [bp + .ofd]	; Base offset in display list, for the line
-	mov d,     [bp + .hgt]
+	add [bp + .hgt], x0	; Loop termination condition using the x0 offset
 	mov c,     2		; Prepare for offset increments / decrements
 	mov x2,    [bp + .orc]
-	mov xm2,   PTR16I	; Prepare source command list pointer
 
 	xbs [bp + .btp], 0
 	jmr .abt		; Add to bottom
 
-.atp:	mov xm0,   PTR8I	; Add to top
-	sub b,     2		; Alter base offset to get the right pointers
+.atp:	sub b,     2		; Alter base offset to get the right pointers
 .lt:	mov x3,    [x1]
 	xne x3,    [x0]
 	jmr .ltx		; Equal offsets: no more space remained.
@@ -500,17 +503,16 @@ gdgsprit_addlist:
 	mov [x3],  a
 	mov a,     [x2]
 	mov [x3],  a
+	sub x1,    1		; Undo auto increment
 	sub [x1],  c		; Decremented bottom offset
 .lte:	add b,     [bp + .esz]	; To next line in display list
-	add x1,    1		; To next line in pointer list
-	sub d,     1
-	xeq d,     0		; End of sprite
+	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lt
 	jmr .exit
 .ltx:	add x2,    2		; Skip source line
 	jmr .lte
 
-.abt:	mov xm1,   PTR8I	; Add to bottom
+.abt:
 .lb:	mov x3,    [x0]
 	xne x3,    [x1]
 	jmr .lbx		; Equal offsets: no more space remained.
@@ -519,11 +521,10 @@ gdgsprit_addlist:
 	mov [x3],  a
 	mov a,     [x2]
 	mov [x3],  a
+	sub x0,    1		; Undo auto increment
 	add [x0],  c		; Incremented bottom offset
 .lbe:	add b,     [bp + .esz]	; To next line in display list
-	add x0,    1		; To next line in pointer list
-	sub d,     1
-	xeq d,     0		; End of sprite
+	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lb
 	jmr .exit
 .lbx:	add x2,    2		; Skip source line
@@ -572,23 +573,23 @@ gdgsprit_addbg:
 	mov [bp + 5], xm
 	mov [bp + 6], x3
 
-	; Check if line is valid for the display list
+	; Number of lines available
 
 	mov a,     200
 	xbs [0x1E04], 15	; Double scanned if set
 	shl a,     1		; Make 400 if not double scanned
-	xug a,     [bp + .psy]
-	jmr .exit		; Not valid (Y not less than line max)
 
 	; Add pattern to line
 
+	mov x3,    [bp + .psy]
+	xug a,     x3		; Valid line?
+	jmr .exit		; Not valid (Y not less than line max)
 	mov a,     [0x1E05]
 	and a,     3		; Display list entry size
-	mov x3,    8		; Base size (for 4 entries)
+	shl x3,    3		; Base size (for 4 entries) is 8 words
 	shl x3,    a		; 4 / 8 / 16 / 32 entries
 	xbc [0x1E04], 15
 	shl x3,    1		; Double scan doubles it once more
-	mul x3,    [bp + .psy]
 	add x3,    [bp + .ofd]	; Position to the line
 
 	mov xm3,   PTR16I
