@@ -55,9 +55,9 @@ sprites. This example also contains some ready to use libraries:
   the 16 color display. An encoder for this format is provided in the
   makerle.c source.
 
-- GDG sprite library (gdgsprit.asm): A complete sprite library for the
-  Graphics Display Generator, designed to be useful with a graphics engine
-  utilizing the Accelerator as well.
+- GDG sprite library (gdgsprit.asm; gdgspfix.asm): A complete sprite library
+  for the Graphics Display Generator, designed to be useful with a graphics
+  engine utilizing the Accelerator as well.
 
 
 Mixer (mixer)

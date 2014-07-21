@@ -22,7 +22,7 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: GDG sprites      "
-	db "\nVersion: 00.000.002"
+	db "\nVersion: 00.000.003"
 	db "\nEngSpec: 00.008.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
@@ -86,11 +86,12 @@ membl:	jsv {kc_mem_banksame, a, b}
 	jfa sinewave {rowps, 25, 0,   0, 0x100,  5}
 	jfa sinewave {rasps,  8, 0, 200, 0x100,  5}
 	jfa gdgsprit_init {sprt_data, sprt_list, gconf}
+	jfa gdgspfix_reset {sprt_data, sprt_list, 0, 0x2006}
 	jfa renderbars {rasps, rbars}
 	jfa renderrows {rowps}
-	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 0, 40, 0}
+	jfa gdgspfix_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 2, 40, 0}
 	jfa rendertext {colps, txt0}
-	jfa gdgsprit_frame {sprt_data, sprt_list, gconf}
+	jfa gdgsprit_frame {sprt_data, sprt_list, 0, 0}
 
 	; Load the data into the Video RAM: characters and the RRPGE logo
 
@@ -139,12 +140,12 @@ lmain:	mov a,     [0x1F0C]
 	jfa sinewave {colps, 30, a, 300,    70, 14}
 	jfa sinewave {rowps, 25, a,   0, 0x100,  5}
 	jfa sinewave {rasps,  8, a, 200, 0x100,  5}
-	jfa gdgsprit_reset {sprt_data, sprt_list}
+	jfa gdgspfix_reset {sprt_data, sprt_list, 0, 0x2006}
 	jfa renderbars {rasps, rbars}
 	jfa renderrows {rowps}
-	jfa gdgsprit_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 0, 40, 0}
+	jfa gdgspfix_addsprite {sprt_data, sprt_list, 0x019A, 0x8000, 230, 2, 40, 0}
 	jfa rendertext {colps, txt0}
-	jfa gdgsprit_frame {sprt_data, sprt_list, gconf}
+	jfa gdgsprit_frame {sprt_data, sprt_list, 0, 0}
 
 	jmr lmain
 
@@ -366,7 +367,7 @@ renderrows:
 .lp:	mov b,     [x3]
 	and b,     0x03FF	; Low 10 bits are position
 	or  b,     0x8000
-	jfa gdgsprit_add {sprt_data, sprt_list, a, b, 16, 0, d}
+	jfa gdgspfix_add {sprt_data, sprt_list, a, b, 16, 1, d}
 	add a,     16
 	add d,     16
 	sub c,     1
@@ -495,5 +496,6 @@ getcharcomm:
 ;
 
 include "gdgsprit.asm"
+include "gdgspfix.asm"
 include "copy.asm"
 include "rledec.asm"

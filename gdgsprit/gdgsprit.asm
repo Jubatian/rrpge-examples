@@ -48,6 +48,10 @@
 ; gdgsprit_frame
 ; gdgsprit_reset
 ;
+; For library extensions only the following additional function is available:
+;
+; gdgsprit_i_getconfig
+;
 
 
 include "../rrpge.asm"
@@ -194,13 +198,12 @@ gdgsprit_add:
 	shr x3,    12
 	and x3,    7		; Source definition select
 	add x3,    0x1E08
-	mov a,     [x3]		; Load source definition
-	mov d,     a
+	mov d,     [x3]		; Load source definition
+	xbc d,     5
+	mov d,     0		; Shift source: multiplier will be 1
 	shr d,     2
 	and d,     6		; Multiplier: 0, 2, 4, 6
 	add d,     1		; Multiplier: 1, 3, 5, 7
-	xbc a,     5
-	mov d,     1		; Shift source: multiplier is 1
 
 	; Clip the graphics component if needed. If partial from the top, the
 	; render command itself also alters so respecting the first visible
@@ -253,6 +256,8 @@ gdgsprit_add:
 	add b,     [bp + .ofd]	; Base offset in display list, for the line
 	add [bp + .hgt], x0	; Loop termination condition using the x0 offset
 	mov c,     2		; Prepare for offset increments / decrements
+	xch d,     [bp + .rch]	; Swap so no need to load in reg. in the loop
+	mov a,     [bp + .rcl]
 
 	xbs [bp + .btp], 0
 	jmr .abt		; Add to bottom
@@ -261,30 +266,31 @@ gdgsprit_add:
 	sub b,     2		; Alter base offset to get the right pointers
 .lt:	mov x3,    [x1]
 	xne x3,    [x0]
-	jmr .lte		; Equal offsets: no more space remained.
+	jmr .ltx		; Equal offsets: no more space remained.
 	add x3,    b		; Offset in display list
-	mov a,     [bp + .rch]
+	mov [x3],  d
 	mov [x3],  a
-	mov a,     [bp + .rcl]
-	mov [x3],  a
-	sub [x2],  c		; Decremented bottom offset
-.lte:	add [bp + .rch], d	; Add to source line select for the next line
+	sub [x2],  c		; Decremented top offset
+.lte:	add d,     [bp + .rch]	; Add to source line select for the next line
 	add b,     [bp + .esz]	; To next line in display list
 	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lt
 	jmr .exit
 
+.ltx:	mov x2,    x1
+	jmr .lte
+.lbx:	mov x2,    x0
+	jmr .lbe
+
 .abt:	mov x2,    x0
 .lb:	mov x3,    [x0]
 	xne x3,    [x1]
-	jmr .lbe		; Equal offsets: no more space remained.
+	jmr .lbx		; Equal offsets: no more space remained.
 	add x3,    b		; Offset in display list
-	mov a,     [bp + .rch]
-	mov [x3],  a
-	mov a,     [bp + .rcl]
+	mov [x3],  d
 	mov [x3],  a
 	add [x2],  c		; Incremented bottom offset
-.lbe:	add [bp + .rch], d	; Add to source line select for the next line
+.lbe:	add d,     [bp + .rch]	; Add to source line select for the next line
 	add b,     [bp + .esz]	; To next line in display list
 	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lb
@@ -365,11 +371,11 @@ gdgsprit_addsprite:
 	add x3,    0x1E08
 	mov b,     [x3]		; Load source definition
 	mov x3,    b
+	xbc x3,    5
+	mov x3,    0		; Shift source: multiplier will be 1
 	shr x3,    2
 	and x3,    6		; Multiplier: 0, 2, 4, 6
 	add x3,    1		; Multiplier: 1, 3, 5, 7
-	xbc b,     5
-	mov x3,    1		; Shift source: multiplier is 1
 	and b,     7		; Width
 	shl x3,    b		; Total width of sprite in cells
 	shl x3,    3		; Total width in 4 bit pixels
@@ -504,13 +510,16 @@ gdgsprit_addlist:
 	mov a,     [x2]
 	mov [x3],  a
 	sub x1,    1		; Undo auto increment
-	sub [x1],  c		; Decremented bottom offset
+	sub [x1],  c		; Decremented top offset
 .lte:	add b,     [bp + .esz]	; To next line in display list
 	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lt
 	jmr .exit
+
 .ltx:	add x2,    2		; Skip source line
 	jmr .lte
+.lbx:	add x2,    2		; Skip source line
+	jmr .lbe
 
 .abt:
 .lb:	mov x3,    [x0]
@@ -526,9 +535,6 @@ gdgsprit_addlist:
 .lbe:	add b,     [bp + .esz]	; To next line in display list
 	xeq x0,    [bp + .hgt]	; End of sprite
 	jmr .lb
-	jmr .exit
-.lbx:	add x2,    2		; Skip source line
-	jmr .lbe
 
 	; Restore CPU regs & exit
 
@@ -689,27 +695,35 @@ gdgsprit_addbglist:
 ; RAM, to the area where the Graphics Display Generator excepts it, finally
 ; preparing for a new frame.
 ;
+; Source definition 0 and 1 may be changed during this process in vertical
+; blank. This is useful if double buffering a surface is needed. Setting these
+; parameters to zero skips this.
+;
 ; All data must be on continuous pages.
 ;
 ; param0: Offset of 1024 word internal object data.
 ; param1: Offset of Display List (size depends on graphics config.)
+; param2: Value for Source definition 0, set zero to ignore.
+; param3: Value for Source definition 1, set zero to ignore.
 ;
 gdgsprit_frame:
 
 .ofi	equ	0		; Internal object data offset
 .ofd	equ	1		; Display list offset
+.sd0	equ	2		; Source definition 0
+.sd1	equ	3		; Source definition 1
 
-	mov sp,    10
+	mov sp,    11
 
 	; Save CPU regs
 
-	mov [bp + 3], a
-	mov [bp + 4], b
-	mov [bp + 5], c
-	mov [bp + 6], d
-	mov [bp + 7], xm
-	mov [bp + 8], x3
-	mov [bp + 9], x2
+	mov [bp +  4], a
+	mov [bp +  5], b
+	mov [bp +  6], c
+	mov [bp +  7], d
+	mov [bp +  8], xm
+	mov [bp +  9], x3
+	mov [bp + 10], x2
 
 	; Load current configuration values:
 	; 'b': display list DMA offset in VRAM (target)
@@ -732,6 +746,15 @@ gdgsprit_frame:
 	xbs a,     15		; If positive, not in VBlank, so wait
 	jmr .lw
 
+	; Update source definitions if requested
+
+	mov a,     [bp + .sd0]
+	xeq a,     0
+	mov [0x1E08], a
+	mov a,     [bp + .sd1]
+	xeq a,     0
+	mov [0x1E09], a
+
 	; Copy into VRAM & clear source (this might not finish before the
 	; frame starts to be drawn, but performs faster than the beam, so OK).
 	; Rough cycle estimations:
@@ -750,13 +773,13 @@ gdgsprit_frame:
 
 	; Restore CPU regs & exit
 
-	mov a,     [bp + 3]
-	mov b,     [bp + 4]
-	mov c,     [bp + 5]
-	mov d,     [bp + 6]
-	mov xm,    [bp + 7]
-	mov x3,    [bp + 8]
-	mov x2,    [bp + 9]
+	mov a,     [bp +  4]
+	mov b,     [bp +  5]
+	mov c,     [bp +  6]
+	mov d,     [bp +  7]
+	mov xm,    [bp +  8]
+	mov x3,    [bp +  9]
+	mov x2,    [bp + 10]
 	rfn
 
 
@@ -864,12 +887,6 @@ gdgsprit_i_getconfig:
 	shl c,     8
 	or  d,     c		; Replicate it to bits 8-15
 
-	; Calculate mask for display list def. start offset
-
-	mov x3,   0x01FC
-	shl x3,   b		; Low bits of start unused depending on size
-	and x3,   0x01FC
-
 	; Calculate display list size in 256 word blocks in 'c'
 
 	mov a,     25		; 128 * 25 = 3200
@@ -881,6 +898,9 @@ gdgsprit_i_getconfig:
 
 	; Reload display list def. to produce DMA start offset in VRAM to 'b'
 
+	mov x3,    0xFE00
+	shl x3,    b		; Low bits of start unused depending on size
+	shr x3,    7		; Mask for bits 2 / 3 / 4 / 5 - 8
 	mov b,     [0x1E05]	; Display list definition; bit 2-8: offset.
 	and b,     x3		; So far in 512 VRAM cell units.
 	shl b,     2		; Now in 128 VRAM cell units, for DMA.
