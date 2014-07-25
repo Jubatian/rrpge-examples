@@ -190,20 +190,24 @@ gdgsprit_add:
 
 .entr:	mov xm,    0x6888
 
-	; Load the source width multiplier so to know how many to add to the
-	; source line select to advance one line. The multiplier stays one if
-	; the source is a shift source (multiplier ignored).
+	; Calculate source width multiplier (as far as possible) so to know
+	; how many to add to the source line select to advance one line. The
+	; multiplier stays one if the source is a shift source.
 
 	mov x3,    [bp + .rch]
 	shr x3,    12
 	and x3,    7		; Source definition select
 	add x3,    0x1E08
-	mov d,     [x3]		; Load source definition
-	xbc d,     5
-	mov d,     0		; Shift source: multiplier will be 1
-	shr d,     2
-	and d,     6		; Multiplier: 0, 2, 4, 6
-	add d,     1		; Multiplier: 1, 3, 5, 7
+	mov a,     [x3]		; Load source definition
+	mov d,     1
+	xbc a,     7
+	jmr .shfs
+	mov d,     a
+	and d,     0x7F
+	shr a,     8
+	and a,     7
+	shr d,     a
+.shfs:
 
 	; Clip the graphics component if needed. If partial from the top, the
 	; render command itself also alters so respecting the first visible
@@ -212,26 +216,23 @@ gdgsprit_add:
 	mov x3,    200
 	xbs [0x1E04], 15	; Double scanned if set
 	shl x3,    1		; Make 400 if not double scanned
+	mov c,     0		; Prepare a zero for use where needed
 	xbs [bp + .psy], 15
 	jmr .ntc		; Positive or zero: no top clip required
-	mov a,     0
-	sub a,     [bp + .psy]
-	sub [bp + .hgt], a	; New height
+	mov a,     [bp + .psy]
+	add [bp + .hgt], a	; New height
 	xbc [bp + .hgt], 15
 	jmr .exit		; Turned negative: off screen to the top
 	mul a,     d		; For new source line select
-	add [bp + .rch], a	; OK, new source start calculated
-	mov a,     0
-	mov [bp + .psy], a	; New Y start
+	sub [bp + .rch], a	; OK, new source start calculated
+	mov [bp + .psy], c	; New Y start (0)
 .ntc:	xug x3,    [bp + .psy]	; Completely off screen to the bottom?
 	jmr .exit
-	mov a,     [bp + .psy]
-	add a,     [bp + .hgt]
-	xug x3,    a
-	mov a,     x3		; Truncate sprite on the bottom
-	sub a,     [bp + .psy]
-	mov [bp + .hgt], a
-	xne a,     0
+	mov a,     x3
+	sub a,     [bp + .psy]	; Number of px. available for the source
+	xug a,     [bp + .hgt]
+	mov [bp + .hgt], a	; Truncate height if necessary
+	xne [bp + .hgt], c
 	jmr .exit		; Height might have started as or turned zero
 
 	; Add to each line. If the top & bottom pointers equal, it can not be
@@ -451,26 +452,23 @@ gdgsprit_addlist:
 	mov x3,    200
 	xbs [0x1E04], 15	; Double scanned if set
 	shl x3,    1		; Make 400 if not double scanned
+	mov c,     0		; Prepare a zero for use where needed
 	xbs [bp + .psy], 15
 	jmr .ntc		; Positive or zero: no top clip required
-	mov a,     0
-	sub a,     [bp + .psy]
-	sub [bp + .hgt], a	; New height
+	mov a,     [bp + .psy]
+	add [bp + .hgt], a	; New height
 	xbc [bp + .hgt], 15
 	jmr .exit		; Turned negative: off screen to the top
 	shl a,     1
-	add [bp + .orc], a	; New render command list start offset
-	mov a,     0
-	mov [bp + .psy], a	; New Y start
+	sub [bp + .orc], a	; New render command list start offset
+	mov [bp + .psy], c	; New Y start (0)
 .ntc:	xug x3,    [bp + .psy]	; Completely off screen to the bottom?
 	jmr .exit
-	mov a,     [bp + .psy]
-	add a,     [bp + .hgt]
-	xug x3,    a
-	mov a,     x3		; Truncate sprite on the bottom
-	sub a,     [bp + .psy]
-	mov [bp + .hgt], a
-	xne a,     0
+	mov a,     x3
+	sub a,     [bp + .psy]	; Number of px. available for the source
+	xug a,     [bp + .hgt]
+	mov [bp + .hgt], a	; Truncate height if necessary
+	xne [bp + .hgt], c
 	jmr .exit		; Height might have started as or turned zero
 
 	; Add to each line. If the top & bottom pointers equal, it can not be

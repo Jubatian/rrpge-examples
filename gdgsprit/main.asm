@@ -22,8 +22,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: GDG sprites      "
-	db "\nVersion: 00.000.003"
-	db "\nEngSpec: 00.008.000"
+	db "\nVersion: 00.000.004"
+	db "\nEngSpec: 00.009.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -40,8 +40,8 @@ org 0xBAC
 	; Graphics configuration for the sprite library
 
 gconf:	dw 0x5000, 0x01FE, 0x1020, 0x4080
-	dw 0x0014, 0x2041, 0x4041, 0x6041
-	dw 0x00A7, 0x8083, 0x00C3, 0x80C3
+	dw 0x0450, 0x2902, 0x8A04, 0xCA04
+	dw 0x1780, 0x9308, 0x1B08, 0x9B08
 
 	; Rasterbar patterns
 

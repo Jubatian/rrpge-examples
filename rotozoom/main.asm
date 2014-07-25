@@ -21,8 +21,8 @@ section cons
 	db "RPA\n"
 	db "\nAppAuth: Jubatian        "
 	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.004"
-	db "\nEngSpec: 00.008.000"
+	db "\nVersion: 00.000.005"
+	db "\nEngSpec: 00.009.000"
 	db "\nLicense: RRPGEv2\n\n"
 	db 0
 
@@ -63,10 +63,10 @@ reimp_end:
 
 accrg:				; 8 accelerator registers for rotozoom
 	dw 0x00F0		; Source partition, X/Y split irrelevant, destination full.
+	dw 0x0000		; Substitutions irrelevant, no barrel rotation / colorkey.
+	dw 0xFF00		; Source AND mask: no effect (set), no colorkey.
 	dw 0x0000		; Reindex bank irrelevant (by destination).
-	dw 0x0000		; Substitutions irrelevant, no barrel rotation.
-	dw 0x00FF		; Source masks: no effect (OR: clear, AND: set).
-	dw 0x3000		; Reindex by destination mode, no colorkey.
+	dw 0x3000		; Reindex by destination mode, no OR mask.
 	dw 400			; 400 lines.
 	dw 640			; One line takes 640 4bit pixels.
 	dw 0x0000		; Trigger: value irrelevant.
@@ -136,13 +136,13 @@ ldls:	mov [x3],  a
 	mov [x2],  a
 	mov a,     0xFFF0	; Partition sizes & X/Y split: all full (only X used)
 	mov [x2],  a
+	mov a,     0x0000	; No substitutions, barrel rotate or colorkey
+	mov [x2],  a
+	mov a,     0xFF00	; Source AND masks & colorkey
+	mov [x2],  a
 	mov a,     0x0000	; No reindexing
 	mov [x2],  a
-	mov a,     0x0000	; No substitutions or barrel rotate
-	mov [x2],  a
-	mov a,     0x00FF	; Source masks
-	mov [x2],  a
-	mov a,     0x0000	; Mode: Plain Block Blitter, no reindex, no colorkey
+	mov a,     0x0000	; Mode: Plain Block Blitter, no reindex, no OR mask
 	mov [x2],  a
 	mov a,     400		; Output 400 lines
 	mov [x2],  a

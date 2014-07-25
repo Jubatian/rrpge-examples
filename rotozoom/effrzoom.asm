@@ -261,12 +261,12 @@ offrzoom:
 	or  a,     0xF600	; Source partition size is 64K cells, split is at 128 cells
 	mov [x2],  a
 	mov a,     [x3]
-	mov [x2],  a		; Reindexing used as-is.
-	mov a,     [x3]
-	and a,     0x1FFF	; Dont substitue anything, but keep barrel rotate setting.
+	and a,     0x1FFF	; Dont substitue anything, but keep barrel rotate / colorkey setting.
 	mov [x2],  a
 	mov a,     [x3]
 	mov [x2],  a		; Masks used as-is.
+	mov a,     [x3]
+	mov [x2],  a		; Reindexing used as-is.
 	mov a,     [x3]
 	and a,     0xF3FF	; Clear mode setting
 	or  a,     0x0800	; Set scaled blitter
