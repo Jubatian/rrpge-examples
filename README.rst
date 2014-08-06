@@ -81,6 +81,27 @@ firsts when testing a new RRPGE implementation, requiring the least from the
 host.
 
 
+Proportional text (proptext)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Proportional text output using the Graphics Accelerator. It contains several
+small libraries to achieve it's goals:
+
+- Copy (copy.asm): A generic copy capable to copy any amount of data between
+  any two locations, utilizing DMA where possible.
+
+- Blitter (blit.asm; blitnc.asm; blitsupp.asm): Generic blitter useful for
+  most types of Block Blitter usage, such as working with Accelerator sprites.
+
+- Text (textblit.asm; textlgen.asm): Proportional text output capable to build
+  multi-line texts with left, right, center or justify alignments with some
+  support for text formatting.
+
+- Compact 1bit font definition (fontdef1.asm): A font definition expander
+  which may be used for saving some bits of storage space compared to storing
+  a full 256 * 4 Word font definition.
+
+
 Rotozoomer (rotozoom)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
