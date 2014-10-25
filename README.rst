@@ -4,8 +4,9 @@ RRPGE Example applications
 
 :Author:    Sandor Zsuga (Jubatian)
 :Copyright: 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
-            License) extended as RRPGEv2 (version 2 of the RRPGE License): see
-            LICENSE.GPLv3 and LICENSE.RRPGEv2 in the project root.
+            License) extended as RRPGEvt (temporary version of the RRPGE
+            License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
+            root.
 
 
 
@@ -16,6 +17,26 @@ Introduction
 
 A mix of simple to complex example applications to demonstrate the features of
 RRPGE, and to provide guidance for programming the RRPGE CPU.
+
+Currently transition is ongoing in accordance to Specification 00.011.003 and
+the oncoming 00.012.000. New, or rewised examples are released under the
+Temporary RRPGE License.
+
+As of now only the following examples are functional: ::
+
+    simplegf
+    mouse
+
+
+Temporary license notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Currently the project is developed under a temporary GPL compatible license.
+The intention for later is to add some permissive exceptions to this license,
+allowing for creating derivative works (most importantly, applications) under
+other licenses than GPL.
+
+For more information, see http://www.rrpge.org/community/index.php?topic=30.0
 
 
 

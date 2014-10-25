@@ -1,10 +1,11 @@
 ;
-; Mouse example program
+; Simple mouse example
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
-;           License) extended as RRPGEv2 (version 2 of the RRPGE License): see
-;           LICENSE.GPLv3 and LICENSE.RRPGEv2 in the project root.
+;           License) extended as RRPGEvt (temporary version of the RRPGE
+;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
+;           root.
 ;
 ;
 ; Shows some mouse input, simply by plotting pixels on the display as the
@@ -14,30 +15,19 @@
 
 include "../rrpge.asm"
 
-section cons
+AppAuth db "Jubatian"
+AppName db "Example: Simple mouse"
+Version db "00.000.000"
+EngSpec db "00.011.003"
+License db "RRPGEvt", "\n"
+        db 0
 
-	db "RPA\n"
-	db "\nAppAuth: Jubatian        "
-	db "\nAppName: Example program: Mouse            "
-	db "\nVersion: 00.000.003"
-	db "\nEngSpec: 00.008.000"
-	db "\nLicense: RRPGEv2\n\n"
-	db 0
+section desc
 
-org 0xBC0
-
-	; Request mouse device on 0xBC1 of the application header
-
-	dw 0x0000, 0x0800, 0x0100, 0x0000, 0xF800
-
+org 0x000A
+	dw 0x0001		; Request mouse device
 
 section code
-
-	; x3 will be used as pointer into the graphics memory, simply using
-	; the default layout.
-
-	mov xm3,   PTR8
-	mov xh3,   1		; The graphics is visible on the higher half
 
 	; If a mouse is present, it will show up as device 0. Just poll it so
 	; it comes visible to the application. No checking for return as there
@@ -64,6 +54,9 @@ lmain:	; Now enter main loop
 	jsv {kc_inp_getai, 0, 0}
 	shr a,     1		; Mouse X coordinate. It is between 0 and 639, so need to scale down
 	add x3,    a
+	shl c:x3,  3		; Make bit offset as required by the PRAM interface
+	mov [P2_AH], c
+	mov [P2_AL], x3
 
 	; Get buttons: left (primary) button cycles color to left, right
 	; (secondary) button cycles to the right. Note: input group 0 is the
@@ -81,6 +74,6 @@ lmain:	; Now enter main loop
 
 	; Plot pixel
 
-	mov [x3],  b
+	mov [P2_RW],  b
 
 	jmr lmain
