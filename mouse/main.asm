@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple mouse"
-Version db "00.000.000"
-EngSpec db "00.011.003"
+Version db "00.000.001"
+EngSpec db "00.012.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -48,32 +48,32 @@ lmain:	; Now enter main loop
 	; Get mouse coordinates and calculate offset
 
 	jsv {kc_inp_getai, 0, 1}
-	shr a,     1		; Mouse Y coordinate. It is between 0 and 399, so need to scale down
-	mul a,     320		; Make offset component of it
-	mov x3,    a
+	shr x3,    1		; Mouse Y coordinate. It is between 0 and 399, so need to scale down
+	mul x3,    320		; Make offset component of it
+	mov a,     x3
 	jsv {kc_inp_getai, 0, 0}
-	shr a,     1		; Mouse X coordinate. It is between 0 and 639, so need to scale down
-	add x3,    a
-	shl c:x3,  3		; Make bit offset as required by the PRAM interface
+	shr x3,    1		; Mouse X coordinate. It is between 0 and 639, so need to scale down
+	add a,     x3
+	shl c:a,   3		; Make bit offset as required by the PRAM interface
 	mov [P2_AH], c
-	mov [P2_AL], x3
+	mov [P2_AL], a
 
 	; Get buttons: left (primary) button cycles color to left, right
 	; (secondary) button cycles to the right. Note: input group 0 is the
 	; feedback of touch areas, group 1 gives the mouse buttons.
 
 	jsv {kc_inp_getdi, 0, 1}
-	mov c,     a
-	xor a,     d		; Any button state changed?
-	and a,     c		; Only carry over changes where released -> pressed (click)
+	mov c,     x3
+	xor x3,    d		; Any button state changed?
+	and x3,    c		; Only carry over changes where released -> pressed (click)
 	mov d,     c		; Update previous button state
-	xbc a,     4		; Primary button click?
+	xbc x3,    4		; Primary button click?
 	sub b,     1		; Cycle color to left
-	xbc a,     5		; Secondary button click?
+	xbc x3,    5		; Secondary button click?
 	add b,     1		; Cycle color to right
 
 	; Plot pixel
 
 	mov [P2_RW],  b
 
-	jmr lmain
+	jms lmain
