@@ -26,6 +26,7 @@ As of now only the following examples are functional: ::
 
     simplegf
     mouse
+    rle
 
 
 Temporary license notes
