@@ -97,10 +97,10 @@ us_copy_pfc_i:
 	; Set up target (Peripheral RAM pointer)
 
 	mov x3,    [bp + .tgl]
-	shl c:x3,  5
+	shl c:x3,  4
 	mov [P3_AL], x3
 	mov x3,    [bp + .tgh]
-	slc x3,    5
+	slc x3,    4
 	mov [P3_AH], x3
 	mov x3,    0
 	mov [P3_IH], x3
@@ -203,10 +203,10 @@ us_copy_cfp_i:
 	; Set up source (Peripheral RAM pointer)
 
 	mov x3,    [bp + .srl]
-	shl c:x3,  5
+	shl c:x3,  4
 	mov [P3_AL], x3
 	mov x3,    [bp + .srh]
-	slc x3,    5
+	slc x3,    4
 	mov [P3_AH], x3
 	mov x3,    0
 	mov [P3_IH], x3
@@ -272,10 +272,10 @@ us_copy_pfp_i:
 	; Set up source (Peripheral RAM pointer)
 
 	mov x3,    [bp + .srl]
-	shl c:x3,  5
+	shl c:x3,  4
 	mov [P3_AL], x3
 	mov x3,    [bp + .srh]
-	slc x3,    5
+	slc x3,    4
 	mov [P3_AH], x3
 	mov x3,    0
 	mov [P3_IH], x3
