@@ -1,11 +1,11 @@
 ;
-; Wave effect on a positioned source.
-;
+; Wave effect on a display list.
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
-;           License) extended as RRPGEv2 (version 2 of the RRPGE License): see
-;           LICENSE.GPLv3 and LICENSE.RRPGEv2 in the project root.
+;           License) extended as RRPGEvt (temporary version of the RRPGE
+;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
+;           root.
 ;
 
 
@@ -14,21 +14,26 @@ include "../rrpge.asm"
 section code
 
 ;
-; Applies wave effect on a positioned source
+; Applies wave effect on a display list
 ;
-; The display list has to be banked in the CPU address space. Also uses the
-; small sine table within the ROPD (0xD80 - 0xDFF).
+; Uses the small sine table in the Peripheral RAM (PRAM: 0xFFE40 - 0xFFE7F).
 ;
 ; Only the position in the display list is altered, the rest is left intact.
+; The display list entry provided needs to be the second half (odd address) of
+; a 32 bit display list entry, as the position information in it is updated.
 ;
 ; The wave may be cycled, emphasised, and reduced.
 ;
 ; param0: Position base (only low 10 bits used).
 ; param1: Sine start offset (low 8 bits used).
 ; param2: Sine strength (0 - 0x100).
-; param3: First entry's offset.
-; param4: Display list line size (number of entries / line).
-; param5: Number of lines to alter.
+; param3: Display list entry word offset in PRAM, high.
+; param4: Display list entry word offset in PRAM, low.
+; param5: Display list line size (number of entries / line).
+; param6: Number of lines to alter.
+;
+; Registers C and X3 are not preserved. PRAM pointers 2 and 3 are not
+; preserved. XM3 is assumed to be PTR16I.
 ;
 
 effwave:
@@ -36,76 +41,95 @@ effwave:
 .pbs	equ	0		; Position base
 .sst	equ	1		; Sine start
 .sml	equ	2		; Sine multiplier
-.fof	equ	3		; First entry offset
-.dls	equ	4		; Display list entry size
-.lno	equ	5		; Number of lines to alter
+.doh	equ	3		; Display list offset, high
+.dol	equ	4		; Display list offset, low
+.dls	equ	5		; Display list line size
+.lno	equ	6		; Number of lines to alter
 
-	mov sp,    13		; Reserve space on stack
+	mov sp,    10		; Reserve space on stack
 
 	; Save registers
 
-	mov [bp +  6], a
-	mov [bp +  7], b
-	mov [bp +  8], c
-	mov [bp +  9], x2
-	mov [bp + 10], x3
-	mov [bp + 11], xm
-	mov [bp + 12], xh
+	mov [$7],  a
+	mov [$8],  b
+	mov [$9],  d
 
 	; Sanitize sine multiplier
 
-	mov a,     [bp + .sml]
+	mov a,     [$.sml]
 	xug 0x100, a
 	mov a,     0x100
-	mov [bp + .sml], a
+	mov [$.sml], a
 
 	; Alter position base by the multiplier, so the sine will be centered
 	; around it.
 
 	shr a,     1		; Halve multiplier
-	sub [bp + .pbs], a	; Subtract, so mid sine (0x80) will restore original
+	sub [$.pbs], a		; Subtract, so mid sine (0x80) will restore original
 
 	; Prepare pointer to walk display list
 
-	mov xm3,   PTR16
-	mov x3,    [bp + .fof]
-	add x3,    1		; Low part has to be updated
+	mov x3,    P2_AH
+	mov a,     [$.dol]
+	mov b,     [$.doh]
+	shl c:a,   4
+	slc b,     4
+	mov [x3],  b		; P2_AH
+	mov [x3],  a		; P2_AL
+	mov b,     0
+	mov [x3],  b		; P2_IH
+	mov a,     [$.dls]
+	shl a,     5		; A display list entry is 32 bits
+	mov [x3],  a		; P2_IL
+	mov a,     0xC
+	mov [x3],  a		; P2_DS (16 bit; increment on write only)
 
-	; Prepare pointer to fetch sine
+	; Prepare pointer for sine source (in 'd', the sine start is calculated)
 
-	mov xm2,   PTR8I
-	mov xh2,   0
-	mov x2,    [bp + .sst]
-	and x2,    0xFF
-	add x2,    0x1B00	; 8 bit address of sine (16 bit: 0xD80)
+	add x3,    3
+	mov a,     0x01FF
+	mov [x3],  a		; P3_AH
+	mov d,     [$.sst]
+	and d,     0xFF		; Sine start offset
+	shl d,     3		; Shifted to bit address
+	mov a,     0xC800
+	add a,     d
+	mov [x3],  a		; P3_AL
+	mov [x3],  b		; P3_IH ('b' is still 0)
+	mov a,     8
+	mov [x3],  a		; P3_IL
+	mov a,     3
+	mov [x3],  a		; P3_DS
 
 	; Produce display list
 
-	mov c,     [bp + .lno]	; Line count to alter
-.lp:	mov a,     [x2]		; Load sine value
-	xne x2,    0x1C00	; Wrap sine
-	mov x2,    0x1B00
-	mul a,     [bp + .sml]
+	mov c,     [$.lno]	; Line count to alter
+.lp:	mov a,     [P3_RW]	; Load next sine value
+	add d,     8
+	xne d,     0x800
+	jms .swr		; Sine wraparound
+.swe:	mul a,     [$.sml]
 	shr a,     8
-	add a,     [bp + .pbs]	; Added base, now it is a start offset
+	add a,     [$.pbs]	; Added base, now it is a start offset
 	and a,     0x3FF	; Limit to 10 bits
-	mov b,     [x3]
+	mov b,     [P2_RW]
 	and b,     0xFC00	; Preserve high bits
 	or  b,     a
-	mov [x3],  b
-	add x3,    [bp + .dls]	; To next line's entry
-	add x3,    [bp + .dls]	; (twice since one entry is 32 bits)
+	mov [P2_RW], b
 	sub c,     1
 	xeq c,     0
-	jmr .lp
+	jms .lp
 
 	; Restore regs & return
 
-	mov xh,   [bp + 12]
-	mov xm,   [bp + 11]
-	mov x3,   [bp + 10]
-	mov x2,   [bp +  9]
-	mov c,    [bp +  8]
-	mov b,    [bp +  7]
-	mov a,    [bp +  6]
+	mov d,    [$9]
+	mov b,    [$8]
+	mov a,    [$7]
 	rfn
+
+.swr:	; Handle sine wraparound
+
+	mov d,    0xC800
+	mov [P3_AL], d
+	mov d,    0
+	jms .swe

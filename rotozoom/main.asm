@@ -3,8 +3,9 @@
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
-;           License) extended as RRPGEv2 (version 2 of the RRPGE License): see
-;           LICENSE.GPLv3 and LICENSE.RRPGEv2 in the project root.
+;           License) extended as RRPGEvt (temporary version of the RRPGE
+;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
+;           root.
 ;
 ;
 ; Displays a rotozoomer extended with a display list wave effect. Also shows
@@ -14,23 +15,21 @@
 
 
 include "../rrpge.asm"
-bindata "../logo_rle.bin" h, 0x100
 
-section cons
+AppAuth db "Jubatian"
+AppName db "Example: Rotozoomer"
+Version db "00.000.006"
+EngSpec db "00.012.000"
+License db "RRPGEvt", "\n"
+        db 0
 
-	db "RPA\n"
-	db "\nAppAuth: Jubatian        "
-	db "\nAppName: Example program: Rotozoomer       "
-	db "\nVersion: 00.000.005"
-	db "\nEngSpec: 00.009.000"
-	db "\nLicense: RRPGEv2\n\n"
-	db 0
 
-org 0xBC0
 
-	dw 0x0000, 0x0000, 0x0100, 0x0000, 0xF800
+section data
 
-org 0xA80
+logo_rle:
+
+bindata "../logo_rle.bin"
 
 ;
 ; Darkening reindex map. If source is darker than destination, steps one
@@ -61,117 +60,148 @@ reimp:				; Reindex map (darkening when source is darker)
 	dw 0x0901, 0x0903, 0x0905, 0x0607, 0x0809, 0x090B, 0x0C0D, 0x090F	; F
 reimp_end:
 
-accrg:				; 8 accelerator registers for rotozoom
+accrg:				; 5 accelerator registers for rotozoom
 	dw 0x00F0		; Source partition, X/Y split irrelevant, destination full.
 	dw 0x0000		; Substitutions irrelevant, no barrel rotation / colorkey.
 	dw 0xFF00		; Source AND mask: no effect (set), no colorkey.
 	dw 0x0000		; Reindex bank irrelevant (by destination).
-	dw 0x3000		; Reindex by destination mode, no OR mask.
-	dw 400			; 400 lines.
-	dw 640			; One line takes 640 4bit pixels.
-	dw 0x0000		; Trigger: value irrelevant.
+	dw 0x3000		; Reindex by destination mode, no OR mask, 4 bit mode
+
 
 
 section code
 
-	; Switch to 4 bit mode
+main:
+
+	; Switch to 640x400, 16 color mode
 
 	jsv {kc_vid_mode, 0}
-
-	; Turn off double scanned mode.
-
-	mov a,     0x5000	; Keep output width at 80 cells (not used here)
-	mov [0x1E04], a
 
 	; Set up display list for 400 image lines. Will use entry 1 of the
 	; list for this.
 
-	mov xm3,   PTR16I
-	mov a,     0x0000	; High part of the display list entry
-	mov b,     0xC000	; Low part of the display list entry
-	mov x3,    0x2002	; Points to the list, first line, entry 1
-ldls:	mov [x3],  a
-	mov [x3],  b
-	add a,     5		; Next line (16 * 5 = 80 cells width)
-	add x3,    6		; Skip to next line's entry 1
-	xeq x3,    0x2C82	; Would be line 400's entry 1
-	jmr ldls
+	mov a,     0x01FE
+	mov [P3_AH], a
+	mov a,     0x0000	; Display list's offset
+	mov [P3_AL], a
+	mov a,     0
+	mov [P3_IH], a
+	bts a,     4		; Increment: 16
+	mov [P3_IL], a
+	mov a,     4		; Data unit size: 16 bits
+	mov [P3_DS], a
+
+	; All, except entry 1 of the list is zero. Entry 1 need to populate
+	; the display (entry 0 would be background pattern).
+
+	mov a,     0		; Zero filler
+	mov b,     0x0000	; High part with the source line offsets
+	mov d,     0xC000	; Low part with the render mode & position
+	mov c,     400		; Line counter
+	mov xm0,   PTR16
+	mov x0,    P3_RW
+
+.l0:	mov [x0],  a		; Backround (entry 0)
+	mov [x0],  a		; Backround (entry 0)
+	mov [x0],  b		; Entry 1, high part
+	mov [x0],  d		; Entry 1, low part
+	mov [x0],  a		; Entry 2, empty
+	mov [x0],  a		; Entry 2, empty
+	mov [x0],  a		; Entry 3, empty
+	mov [x0],  a		; Entry 3, empty
+	add b,     5		; Next source line (16 * 5 = 80 cells wide)
+	sub c,     1
+	xeq c,     0
+	jms .l0
+
+	; Copy RLE (1927 words) data into PRAM (high half of bank 0)
+
+	jfa us_copy_pfc {0x0001, 0x0000, logo_rle, 1927}
 
 	; Load RLE image
 
-	jfa rledec {0x3, 0xE800, 0, 0x3000, 0x8000, 0x0000, PAGE_ROPD, 0x400, 0x1230}
+	jfa rledec {0x3, 0xE800, 0, 0x3000, 0x0000, 0x0000, 0x0010, 0x0000, 0x1230}
 
-	; Copy and expand image into the next VRAM bank, to be an 1024 x 512
-	; surface suitable for the rotozoomer. Uses the Accelerator for it.
+	; Copy image to the next PRAM bank (bank 1; it is all zero)
 
 	mov xm2,   PTR16
-	mov x2,    0x1E03	; FIFO data write offset
-	mov c,     0x8016	; FIFO: Accelerator X pointers & increments
-	mov [0x1E02], c
-	mov a,     0x0000	; Source X whole
-	mov [x2],  a
-	mov a,     0x0000	; Source X fraction
-	mov [x2],  a
-	mov a,     0x0001	; Source X increment whole
-	mov [x2],  a
-	mov a,     0x0000	; Source X increment fraction
-	mov [x2],  a
-	mov a,     0x0050	; Source X post-add whole
-	mov [x2],  a
-	mov a,     0x0000	; Source X post-add fraction
-	mov [x2],  a
-	mov a,     0x0000	; Destination whole
-	mov [x2],  a
-	mov a,     0x0000	; Destination fraction
-	mov [x2],  a
-	mov a,     0x0001	; Destination increment
-	mov [x2],  a
-	mov a,     0x0080	; Destination post-add
-	mov [x2],  a
-	mov c,     0x8006	; FIFO: Acc. source bank & partition select
-	mov [0x1E02], c
-	mov a,     0x0000	; Source bank: 0, partition select unused.
-	mov [x2],  a
-	mov a,     0x0001	; Destination bank: 1. partition select unused.
-	mov [x2],  a
-	mov a,     0xFFF0	; Partition sizes & X/Y split: all full (only X used)
-	mov [x2],  a
-	mov a,     0x0000	; No substitutions, barrel rotate or colorkey
-	mov [x2],  a
-	mov a,     0xFF00	; Source AND masks & colorkey
-	mov [x2],  a
-	mov a,     0x0000	; No reindexing
-	mov [x2],  a
-	mov a,     0x0000	; Mode: Plain Block Blitter, no reindex, no OR mask
-	mov [x2],  a
-	mov a,     400		; Output 400 lines
-	mov [x2],  a
-	mov a,     640		; Output 640 4bit pixels in a line
-	mov [x2],  a
-	mov [x2],  a		; Fire accelerator (written value irrelevant)
+	mov x2,    P_GFIFO_DATA
+	mov a,     0x8016	; Accelerator X pointers & increments
+	mov [P_GFIFO_ADDR], a
+	mov a,     0x0000
+	mov [x2],  a		; Source X whole
+	mov a,     0x0000
+	mov [x2],  a		; Source X fraction
+	mov a,     0x0001
+	mov [x2],  a		; Source X increment whole
+	mov a,     0x0000
+	mov [x2],  a		; Source X increment fraction
+	mov a,     0x0050
+	mov [x2],  a		; Source X post-add whole
+	mov a,     0x0000
+	mov [x2],  a		; Source X post-add fraction
+	mov a,     0x0000
+	mov [x2],  a		; Destination whole
+	mov a,     0x0000
+	mov [x2],  a		; Destination fraction
+	mov a,     0x0001
+	mov [x2],  a		; Destination increment
+	mov a,     0x0080
+	mov [x2],  a		; Destination post-add
+	mov a,     0x8004	; Accelerator source bank select
+	mov [P_GFIFO_ADDR], a
+	mov a,     0
+	mov [x2],  a		; Source bank select
+	mov a,     1
+	mov [x2],  a		; Destination bank select
+	mov a,     0
+	mov [x2],  a		; Source partition select
+	mov a,     0
+	mov [x2],  a		; Destination partition select
+	mov a,     0xFFF0
+	mov [x2],  a		; Partitioning settings
+	mov a,     0x0000
+	mov [x2],  a		; Substitutions, source barrel rotate, colorkey flag
+	mov a,     0xFF00
+	mov [x2],  a		; Source AND mask and colorkey
+	mov a,     0
+	mov [x2],  a		; Reindex bank select
+	mov a,     0x0000
+	mov [x2],  a		; Blit mode (BB, no reindex, 4 bit, no mirror, no OR)
+	mov a,     400
+	mov [x2],  a		; 400 lines
+	mov a,     640
+	mov [x2],  a		; 640 pixels / line
+	mov [x2],  a		; Start trigger
 
-	; Accelerator is copying stuff. Meanwhile set up reindexing table,
-	; also through the Graphics FIFO.
+	; Set up reindex table by feeding it into the Graphics FIFO.
 
-	mov xm3,   PTR16I
 	mov x3,    reimp
-	mov c,     0x0100	; First reindex register
-	mov [0x1E02], c
-rlop:	mov a,     [x3]
+	mov c,     0x8100	; First reindex register
+	mov [P_GFIFO_ADDR], c
+.rlop:	mov a,     [x3]
 	mov [x2],  a
 	xeq x3,    reimp_end
-	jmr rlop
+	jms .rlop
 
-	; Set up the Accelerator for the rotozoomer
+	; Set up Accelerator for rotozooming
 
-	mov c,     0x06		; FIFO: Source bank & partition select
-	mov [0x1E02], c
-	mov a,     0x0001	; Source bank & partition select
-	mov [x2],  a
-	mov a,     0x0000	; Destination bank & partition select
-	mov [x2],  a
-	mov c,     0x1C		; FIFO: Destination whole
-	mov [0x1E02], c
+	mov c,     0x8004	; FIFO: Accelerator source bank select
+	mov [P_GFIFO_ADDR], c
+	mov a,     1
+	mov [x2],  a		; Source bank select
+	mov a,     0
+	mov [x2],  a		; Destination bank select
+	mov [x2],  a		; Source partition select
+	mov [x2],  a		; Destination partition select
+	mov c,     0x800D	; FIFO: Accelerator row count
+	mov [P_GFIFO_ADDR], c
+	mov a,     400
+	mov [x2],  a		; 400 lines
+	mov a,     640
+	mov [x2],  a		; 640 pixels / line
+	mov c,     0x801C	; FIFO: Destination whole
+	mov [P_GFIFO_ADDR], c
 	mov a,     0x0000	; Destination whole
 	mov [x2],  a
 	mov a,     0x0000	; Destination fraction
@@ -181,33 +211,32 @@ rlop:	mov a,     [x3]
 	mov a,     0x0050	; Destination post-add
 	mov [x2],  a
 
-	; Enter main loop. The real time synchronization is based on the audio
-	; counter, running at 48KHz. It is (software) divided by 512 to get a
-	; roughly 94Hz base tick. x3 will keep track of this, while x0 will
-	; keep track of 94Hz ticks.
+	; Enter main loop. The real time synchronization is based on the
+	; 187.5Hz clock, divided by 2 to get a roughly 94Hz base tick. x1 will
+	; keep track of this, while x0 will keep track of 94Hz ticks.
 
-	mov x3,    0x240	; Looks good for start
-	mov x0,    [0x1F0C]	; Audio DMA sample counter (48KHz)
-	shr x0,    9
+	mov x1,    0x240	; Looks good for start
+	mov x0,    [P_CLOCK]	; 187.5Hz clock
+	shr x0,    1
 
-lmaiw:	jsv {kc_dly_delay, 0xFFFF}
-lmain:	mov a,     [0x1E01]
-	xbc a,     0		; Wait for FIFO empty
-	jmr lmaiw
-	mov a,     [0x1F0C]
-	shr a,     9
-	xch x0,    a		; x0: new 47Hz tick, a: old tick value
+.lmw:	jsv {kc_dly_delay, 0xFFFF}
+.lm:	mov a,     [P_GFIFO_STAT]
+	xeq a,     0		; Wait for FIFO empty
+	jms .lmw
+	mov a,     [P_CLOCK]
+	shr a,     1
+	xch x0,    a		; x0: new 94Hz tick, a: old tick value
 	mov b,     x0
 	sub b,     a
-	and b,     0x7F		; Count of ticks since last run
-	add x3,    b
+	and b,     0x7FFF	; Count of ticks since last run
+	add x1,    b
 
-	; Load a value from the large ROPD sine table by x3
+	; Load a value from the large sine table by x3
 
-	mov x2,    x3
+	mov x2,    x1
 	shr x2,    1
 	and x2,    0x1FF
-	add x2,    0xE00	; Offset of large sine (-0x4000 - 0x4000)
+	add x2,    0xFE00	; Offset of large sine (-0x4000 - 0x4000)
 	mov a,     [x2]
 
 	; Run wave effect
@@ -215,7 +244,7 @@ lmain:	mov a,     [0x1E01]
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     8		; 0x00 - 0x80
-	jfa effwave {0, x3, b, 0x2002, 4, 400}
+	jfa effwave {0, x1, b, 0x001F, 0xE003, 4, 400}
 
 	; Run rotozoomer
 
@@ -228,14 +257,14 @@ lmain:	mov a,     [0x1E01]
 	src d,     9		; 0x0000 - 0x2000
 	add b,     d
 	add b,     0x80		; 0x0080 - 0x2880, zoom
-	mov d,     x3
+	mov d,     x1
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
 	jfa offrzoom {320, 200, d, b, accrg}
 
 	; Main loop ends
 
-	jmr lmain
+	jms .lm
 
 
 
@@ -244,5 +273,6 @@ lmain:	mov a,     [0x1E01]
 ;
 
 include "rledec.asm"
+include "copy.asm"
 include "effwave.asm"
 include "effrzoom.asm"

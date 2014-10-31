@@ -3,12 +3,13 @@
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
-;           License) extended as RRPGEv2 (version 2 of the RRPGE License): see
-;           LICENSE.GPLv3 and LICENSE.RRPGEv2 in the project root.
+;           License) extended as RRPGEvt (temporary version of the RRPGE
+;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
+;           root.
 ;
 ;
 ; Decodes 2bit RLE source into a 4bit target (suitable for the 16 color
-; display).
+; display) within the Peripheral RAM.
 ;
 ; The RLE format used:
 ;
@@ -37,8 +38,7 @@ section code
 ;
 ; Decodes a source RLE stream filling up to a given amount of values from it,
 ; taking at most up to a given number of source values. If the source is
-; exhausted early, the remaining destination is not altered. It has no return
-; value, all registers are preserved.
+; exhausted early, the remaining destination is not altered.
 ;
 ; The 2bit -> 4bit expansion table is used to write the destination. It's
 ; layout is as follows:
@@ -51,100 +51,86 @@ section code
 ; param1: Number of destination values to generate, low
 ; param2: Number of source values available, high
 ; param3: Number of source values available, low
-; param4: Destination start page
-; param5: Destination start offset in page (4bit units)
-; param6: Source start page
-; param7: Source start offset in page (4bit units)
+; param4: Destination start high (bit offset)
+; param5: Destination start low (bit offset)
+; param6: Source start high (bit offset)
+; param7: Source start low (bit offset)
 ; param8: 2bit -> 4bit expansion table
+;
+; Registers C and X3 are not preserved. PRAM pointers 2 and 3 are not
+; preserved.
 ;
 
 rledec:
 
-.dch	equ	0		; Destination count, high
-.dcl	equ	1		; Destination count, low
+.tch	equ	0		; Destination count, high
+.tcl	equ	1		; Destination count, low
 .sch	equ	2		; Source count, high
 .scl	equ	3		; Source count, low
-.dpg	equ	4		; Destination page
-.dof	equ	5		; Destination offset
-.spg	equ	6		; Source page
-.sof	equ	7		; Source offset
+.tgh	equ	4		; Destination (target), high
+.tgl	equ	5		; Destination (target), low
+.srh	equ	6		; Source, high
+.srl	equ	7		; Source, low
 .ex0	equ	8		; Expansion table, expansion for 0
 .ex1	equ	9		; Expansion for 1
 .ex2	equ	10		; Expansion for 2
 .ex3	equ	11		; Expansion for 3
 .exe	equ	12		; End of expansions
 
-	mov sp,    32		; Reserve some space on the stack
+	mov sp,    19		; Reserve space on the stack
 
 	; Save CPU registers & current bank selections
 
-	mov [bp + 16], xm
-	mov [bp + 17], x3
-	mov xm3,   PTR16I
-	mov x3,    18
-	mov [bp + x3], xh
-	mov [bp + x3], x2
-	mov [bp + x3], x1
-	mov [bp + x3], x0
-	mov [bp + x3], a
-	mov [bp + x3], b
-	mov [bp + x3], c
-	mov [bp + x3], d
-	mov a,     [ROPD_WBK_8]
-	mov [bp + x3], a	; 26
-	mov a,     [ROPD_RBK_8]
-	mov [bp + x3], a	; 27; Will be used for writing
-	mov a,     [ROPD_WBK_12]
-	mov [bp + x3], a	; 28
-	mov a,     [ROPD_RBK_12]
-	mov [bp + x3], a	; 29; Will be used for reading
-
-	; Sanitize input offsets to be within page
-
-	mov a,     0x3FFF
-	and [bp + .sof], a
-	and [bp + .dof], a
-
-	; Load a "neutral" page in the source write bank, so it will work
-	; proper even if a Video RAM page was there
-
-	jsv {kc_mem_bankwr,   12, 0x4000}
-
-	; Load initial source and destination pages
-
-	jsv {kc_mem_bankrd,   12, [bp + .spg]}
-	jsv {kc_mem_banksame,  8, [bp + .dpg]}
+	mov [$12], xm
+	mov xm,    0x6444	; 'x3': PTR16I, rest: PTR16
+	mov x3,    13
+	mov [$x3], x2
+	mov [$x3], x1
+	mov [$x3], x0
+	mov [$x3], a
+	mov [$x3], b
+	mov [$x3], d
 
 	; Decode the expansion table (x3 is incrementing 16 bits)
 
-	mov a,     [bp + .ex0]
+	mov a,     [$.ex0]
 	mov x3,    .ex0
-.l0:	mov b,     a
-	and b,     0xF
-	mov [bp + x3], b
+.l0:	mov [$x3], a		; Don't care for high bits, they won't show.
 	shr a,     4
 	xeq x3,    .exe
-	jmr .l0
+	jms .l0
 
 	; Set up source and destination pointers. Both are 4bit pointers.
-	; 4bit pointers partition the address space to 4 areas accessible
-	; without an xh modification, the most suitable pages to work with are
-	; so page 0, 4, 8 and 12 (the pointer register being zero points at
-	; the begin of the area selected by xh).
-	; x0 is the source, x1 is the destination.
 
-	mov xm0,   PTR4I
-	mov xm1,   PTR4I
-	mov xh0,   0x3		; Pages 12 - 15
-	mov xh1,   0x2		; Pages  8 - 11
-	mov x0,    [bp + .sof]
-	mov x1,    [bp + .dof]
+	mov x3,    P2_AH
+	mov a,     [$.tgh]
+	mov [x3],  a		; P2_AH
+	mov a,     [$.tgl]
+	mov [x3],  a		; P2_AL
+	mov b,     0
+	mov [x3],  b		; P2_IH
+	mov c,     4
+	mov [x3],  c		; P2_IL
+	mov d,     2
+	mov [x3],  d		; P2_DS
+
+	add x3,    3
+	mov a,     [$.srh]
+	mov [x3],  a		; P3_AH
+	mov a,     [$.srl]
+	mov [x3],  a		; P3_AL
+	mov [x3],  b		; P3_IH
+	mov [x3],  c		; P3_IL
+	mov [x3],  d		; P3_DS
+
+	mov x0,    P3_RW	; Source
+	mov x1,    P2_RW	; Destination (target)
 
 	; Prepare for main decode loop
 
-	mov a,     [bp + .scl]	; 'a' will hold source count low
-	mov b,     [bp + .sch]	; 'b' will hold source count high
-	mov x2,    0		; 'x2' will be zero to use where immediate is not ok
+	mov a,     [$.tcl]	; 'a' will hold destination count low
+	mov b,     [$.tch]	; 'b' will hold destination count high
+	mov x2,    [$.scl]	; 'x2' will hold source count low
 
 	; Enter main decode loop
 
@@ -152,130 +138,90 @@ rledec:
 
 	; Read a source value
 
-	mov d,     1		; To see if source exhausted
-	jfa .read
-	xne d,     0
-	jmr .exit
+	xne x2,    0
+	jms .se0		; 0: to source exhausted test
+.sn0:	sub x2,    1
+	mov c,     [x0]		; Read value
 
 	; Decode it. 'x3' will hold the value, 'c' the count.
 
 	mov x3,    c
 	and x3,    0x3
 	shr c,     2
-	xeq c,     0		; If the high part was zero, needs next
-	jmr .dece		; Otherwise done
-
-	; Need a second source value
-
-	jfa .read
-	xne d,     0
-	jmr .exit
-
-	; Decode the second value
-
-	xug 7,     c		; c: 0-6:  powers of 2.
-	jmr .dece		; c: 7-15: count.
-	add c,     4
-	mov d,     1
-	shl d,     c
-	mov c,     d
+	xne c,     0		; If the high part was zero, needs next
+	jms .secv		; Load second value
 
 .dece:	; Source decoded, in 'x3' is the value, and in 'c' the count. First
 	; transform it.
 
 	add x3,    .ex0
-	mov x3,    [bp + x3]
+	mov x3,    [$x3]
 
 	; Write it out as many times as requested
 
 	mov d,     c		; Note: count is nonzero
-	xeq [bp + .dch], x2	; (x2 is zero)
-	jmr .dsub		; Sure there is enough destination
-	xug d, [bp + .dcl]
-	jmr .dsub		; There is enough destination
-	mov d,     [bp + .dcl]	; Limit to available destination
+	xug d,     a		; Fits in destination count low?
+	jms .dsub		; There is enough destination (0 is never enough here)
+	xeq b,     0		; Destination count high zero?
+	jms .dsub		; Nonzero: Sure there is enough destination
+	mov d,     a		; Limit to available destination
 	xne d,     0
-	jmr .exit		; Destination ran out
-.dsub:	sub c:[bp + .dcl], d	; Available destination shrinks
-	sbc [bp + .dch], x2	; (x2 is zero)
-	add d,     x1
-	and d,     0x3FFF	; Calculate end point (d <= 1024, so OK)
-.oloop:	mov [x1],  x3		; Write the value, and update bank if necessary
-	xug x1,    0x3FFF	; Incremented past page boundary
-	jmr .writ0
-	mov x1,    [ROPD_WBK_8]
-	add x1,    1
-	jsv {kc_mem_banksame, 8, x1}
-	mov x1,    0		; Start from begin
-.writ0:	xeq x1,    d
-	jmr .oloop
+	jms .exit		; Destination ran out
+.dsub:	sub c:a,   d		; Available destination shrinks
+	sbc b,     0
+.oloop:	mov [x1],  x3		; Write the value
+	sub d,     1
+	xeq d,     0
+	jms .oloop
 
 	; A run was written, go on with next
-	jmr .mloop
 
-.exit:
+	jms .mloop
 
-	; Restore CPU registers & bank selections
+.exit:	; Restore CPU registers & exit
 
-	mov xm3,   PTR16D
-	mov x3,    30
-	jsv {kc_mem_bank, 12, [bp + x3], [bp + x3]}
-	jsv {kc_mem_bank,  8, [bp + x3], [bp + x3]}
-	mov d,     [bp + x3]
-	mov c,     [bp + x3]
-	mov b,     [bp + x3]
-	mov a,     [bp + x3]
-	mov x0,    [bp + x3]
-	mov x1,    [bp + x3]
-	mov x2,    [bp + x3]
-	mov xh,    [bp + x3]
-	mov x3,    [bp + x3]
-	mov xm,    [bp + 16]
+	mov x3,    13
+	mov x2,    [$x3]
+	mov x1,    [$x3]
+	mov x0,    [$x3]
+	mov a,     [$x3]
+	mov b,     [$x3]
+	mov d,     [$x3]
+	mov xm,    [$12]
 
 	rfn
 
 
+.secv:	; Need a second source value
 
-;
-; Internal function to read next element of the source. Updates bank if
-; necessary.
-;
-; Inputs:
-; b:a: Source remaining, high:low.
-; x0:  Source pointer (4 bits incrementing).
-;
-; Outputs:
-; b:a: New source remaining, high:low.
-; c:   Value to output (0-15).
-; d:   0 if source exhausted, unchanged otherwise.
-; x0:  Updated.
-;
-.read:
+	xne x2,    0
+	jms .se1		; 0: to source exhausted test
+.sn1:	sub x2,    1
+	mov c,     [x0]		; Read value
 
-	; Is there any source available?
+	; Decode the second value
 
-	xeq a,     0
-	jmr .reads
-	xne b,     0
-	jmr .readf
+	xug 7,     c		; c: 0-6:  powers of 2.
+	jms .dece		; c: 7-15: count.
+	add c,     4
+	mov d,     1
+	shl d,     c
+	mov c,     d
 
-.reads:	; One less source available
+	jms .dece
 
-	sub c:a,   1
-	sbc b,     0
+.se0:	; Source value 0 load: source exhaustion check
 
-	; Read the value, and update bank if necessary
+	mov d,     1
+	sub [$.sch], d
+	xbs [$.sch], 15		; Turned 2's complement negative: was zero
+	jms .sn0
+	; jms .exit (No problem just falling through, will exit)
 
-	mov c,     [x0]
-	xug x0,    0x3FFF	; Incremented past page boundary
-	rfn			; OK, no increment past, return
-	mov x0,    [ROPD_RBK_12]
-	add x0,    1
-	jsv {kc_mem_bankrd, 12, x0}
-	mov x0,    0		; Start from begin
-	rfn
+.se1:	; Source value 1 load: source exhaustion check
 
-.readf:	; Bad return
-
-	mov d,     0
-	rfn
+	mov d,     1
+	sub [$.sch], d
+	xbs [$.sch], 15		; Turned 2's complement negative: was zero
+	jms .sn1
+	jms .exit

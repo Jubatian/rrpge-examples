@@ -27,6 +27,7 @@ As of now only the following examples are functional: ::
     simplegf
     mouse
     rle
+    rotozoom
 
 
 Temporary license notes
