@@ -10,6 +10,7 @@
 
 
 include "../rrpge.asm"
+include "../_userlib/ptr.asm"
 
 section code
 
@@ -69,37 +70,18 @@ effwave:
 
 	; Prepare pointer to walk display list
 
-	mov x3,    P2_AH
-	mov a,     [$.dol]
-	mov b,     [$.doh]
-	shl c:a,   4
-	slc b,     4
-	mov [x3],  b		; P2_AH
-	mov [x3],  a		; P2_AL
-	mov b,     0
-	mov [x3],  b		; P2_IH
-	mov a,     [$.dls]
-	shl a,     5		; A display list entry is 32 bits
-	mov [x3],  a		; P2_IL
-	mov a,     0xC
-	mov [x3],  a		; P2_DS (16 bit; increment on write only)
+	mov c,     [$.dls]
+	shl c,     1		; 2 words for a display list entry
+	jfa us_ptr_setgen16w {2, [$.doh], [$.dol], 0, c}
 
 	; Prepare pointer for sine source (in 'd', the sine start is calculated)
 
-	add x3,    3
-	mov a,     0x01FF
-	mov [x3],  a		; P3_AH
 	mov d,     [$.sst]
 	and d,     0xFF		; Sine start offset
 	shl d,     3		; Shifted to bit address
 	mov a,     0xC800
 	add a,     d
-	mov [x3],  a		; P3_AL
-	mov [x3],  b		; P3_IH ('b' is still 0)
-	mov a,     8
-	mov [x3],  a		; P3_IL
-	mov a,     3
-	mov [x3],  a		; P3_DS
+	jfa us_ptr_set8i {3, 0x01FF, a}
 
 	; Produce display list
 

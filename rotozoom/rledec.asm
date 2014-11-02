@@ -30,6 +30,7 @@
 
 
 include "../rrpge.asm"
+include "../_userlib/ptr.asm"
 
 section code
 
@@ -102,29 +103,10 @@ rledec:
 
 	; Set up source and destination pointers. Both are 4bit pointers.
 
-	mov x3,    P2_AH
-	mov a,     [$.tgh]
-	mov [x3],  a		; P2_AH
-	mov a,     [$.tgl]
-	mov [x3],  a		; P2_AL
-	mov b,     0
-	mov [x3],  b		; P2_IH
-	mov c,     4
-	mov [x3],  c		; P2_IL
-	mov d,     2
-	mov [x3],  d		; P2_DS
-
-	add x3,    3
-	mov a,     [$.srh]
-	mov [x3],  a		; P3_AH
-	mov a,     [$.srl]
-	mov [x3],  a		; P3_AL
-	mov [x3],  b		; P3_IH
-	mov [x3],  c		; P3_IL
-	mov [x3],  d		; P3_DS
-
-	mov x0,    P3_RW	; Source
-	mov x1,    P2_RW	; Destination (target)
+	jfa us_ptr_set4i {2, [$.tgh], [$.tgl]}
+	mov x1,    x3		; Destination (target)
+	jfa us_ptr_set4i {3, [$.srh], [$.srl]}
+	mov x0,    x3		; Source
 
 	; Prepare for main decode loop
 

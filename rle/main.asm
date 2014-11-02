@@ -95,4 +95,4 @@ lmain:	jms lmain
 ;
 
 include "rledec.asm"
-include "copy.asm"
+include "../_userlib/copy.asm"

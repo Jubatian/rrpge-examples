@@ -30,6 +30,7 @@
 
 
 include "../rrpge.asm"
+include "../_userlib/ptr.asm"
 
 section code
 
@@ -81,56 +82,37 @@ rledec:
 
 	; Save CPU registers & current bank selections
 
-	mov [bp + 12], xm
+	mov [$12], xm
 	mov xm,    0x6444	; 'x3': PTR16I, rest: PTR16
 	mov x3,    13
-	mov [bp + x3], x2
-	mov [bp + x3], x1
-	mov [bp + x3], x0
-	mov [bp + x3], a
-	mov [bp + x3], b
-	mov [bp + x3], d
+	mov [$x3], x2
+	mov [$x3], x1
+	mov [$x3], x0
+	mov [$x3], a
+	mov [$x3], b
+	mov [$x3], d
 
 	; Decode the expansion table (x3 is incrementing 16 bits)
 
-	mov a,     [bp + .ex0]
+	mov a,     [$.ex0]
 	mov x3,    .ex0
-.l0:	mov [bp + x3], a	; Don't care for high bits, they won't show.
+.l0:	mov [$x3], a		; Don't care for high bits, they won't show.
 	shr a,     4
 	xeq x3,    .exe
 	jms .l0
 
 	; Set up source and destination pointers. Both are 4bit pointers.
 
-	mov x3,    P2_AH
-	mov a,     [bp + .tgh]
-	mov [x3],  a		; P2_AH
-	mov a,     [bp + .tgl]
-	mov [x3],  a		; P2_AL
-	mov b,     0
-	mov [x3],  b		; P2_IH
-	mov c,     4
-	mov [x3],  c		; P2_IL
-	mov d,     2
-	mov [x3],  d		; P2_DS
-
-	add x3,    3
-	mov a,     [bp + .srh]
-	mov [x3],  a		; P3_AH
-	mov a,     [bp + .srl]
-	mov [x3],  a		; P3_AL
-	mov [x3],  b		; P3_IH
-	mov [x3],  c		; P3_IL
-	mov [x3],  d		; P3_DS
-
-	mov x0,    P3_RW	; Source
-	mov x1,    P2_RW	; Destination (target)
+	jfa us_ptr_set4i {2, [$.tgh], [$.tgl]}
+	mov x1,    x3		; Destination (target)
+	jfa us_ptr_set4i {3, [$.srh], [$.srl]}
+	mov x0,    x3		; Source
 
 	; Prepare for main decode loop
 
-	mov a,     [bp + .tcl]	; 'a' will hold destination count low
-	mov b,     [bp + .tch]	; 'b' will hold destination count high
-	mov x2,    [bp + .scl]	; 'x2' will hold source count low
+	mov a,     [$.tcl]	; 'a' will hold destination count low
+	mov b,     [$.tch]	; 'b' will hold destination count high
+	mov x2,    [$.scl]	; 'x2' will hold source count low
 
 	; Enter main decode loop
 
@@ -155,7 +137,7 @@ rledec:
 	; transform it.
 
 	add x3,    .ex0
-	mov x3,    [bp + x3]
+	mov x3,    [$x3]
 
 	; Write it out as many times as requested
 
@@ -181,13 +163,13 @@ rledec:
 .exit:	; Restore CPU registers & exit
 
 	mov x3,    13
-	mov x2,    [bp + x3]
-	mov x1,    [bp + x3]
-	mov x0,    [bp + x3]
-	mov a,     [bp + x3]
-	mov b,     [bp + x3]
-	mov d,     [bp + x3]
-	mov xm,    [bp + 12]
+	mov x2,    [$x3]
+	mov x1,    [$x3]
+	mov x0,    [$x3]
+	mov a,     [$x3]
+	mov b,     [$x3]
+	mov d,     [$x3]
+	mov xm,    [$12]
 
 	rfn
 
@@ -213,15 +195,15 @@ rledec:
 .se0:	; Source value 0 load: source exhaustion check
 
 	mov d,     1
-	sub [bp + .sch], d
-	xbs [bp + .sch], 15	; Turned 2's complement negative: was zero
+	sub [$.sch], d
+	xbs [$.sch], 15		; Turned 2's complement negative: was zero
 	jms .sn0
 	; jms .exit (No problem just falling through, will exit)
 
 .se1:	; Source value 1 load: source exhaustion check
 
 	mov d,     1
-	sub [bp + .sch], d
-	xbs [bp + .sch], 15	; Turned 2's complement negative: was zero
+	sub [$.sch], d
+	xbs [$.sch], 15		; Turned 2's complement negative: was zero
 	jms .sn1
 	jms .exit

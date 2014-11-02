@@ -41,6 +41,18 @@ other licenses than GPL.
 For more information, see http://www.rrpge.org/community/index.php?topic=30.0
 
 
+User Library notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The directory "_userlib" contains common functions used by the examples. These
+functions in the future (beginning with the oncoming specification version
+00.013.000) will be part of a built-in library, accessible to every RRPGE
+Application. The library is going to be implemented as a complementary feature
+of the system, to be attached to emulators as a pre-compiled binary, showing
+on the high end of the Code address space with a well-defined (long term
+binary compatible) function entry point table.
+
+
 
 
 Build instructions
