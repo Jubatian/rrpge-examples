@@ -16,8 +16,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: RLE decoder"
-Version db "00.000.000"
-EngSpec db "00.012.000"
+Version db "00.000.001"
+EngSpec db "00.013.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -95,4 +95,4 @@ lmain:	jms lmain
 ;
 
 include "rledec.asm"
-include "../_userlib/copy.asm"
+

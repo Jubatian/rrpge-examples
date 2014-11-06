@@ -10,7 +10,6 @@
 
 
 include "../rrpge.asm"
-include "../_userlib/ptr.asm"
 
 section code
 

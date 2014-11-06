@@ -18,15 +18,15 @@ PTR2			equ	0b0010
 PTR1			equ	0b0011
 PTR16			equ	0b0100
 PTR16I			equ	0b0110
-PTR16D			equ	0b0111
+PTR16W			equ	0b0111
 PTR8I			equ	0b1000
 PTR4I			equ	0b1001
 PTR2I			equ	0b1010
 PTR1I			equ	0b1011
-PTR8D			equ	0b1100
-PTR4D			equ	0b1101
-PTR2D			equ	0b1110
-PTR1D			equ	0b1111
+PTR8W			equ	0b1100
+PTR4W			equ	0b1101
+PTR2W			equ	0b1110
+PTR1W			equ	0b1111
 
 ;
 ; User Peripheral Area
@@ -104,6 +104,7 @@ kc_sfi_next		equ	0x0112
 kc_sfi_move		equ	0x0113
 kc_vid_setpal		equ	0x0300
 kc_vid_mode		equ	0x0330
+kc_vid_setst3d		equ	0x0340
 kc_inp_getprops		equ	0x0410
 kc_inp_dropdev		equ	0x0411
 kc_inp_getdidesc	equ	0x0412
@@ -116,6 +117,7 @@ kc_usr_getlocal		equ	0x0600
 kc_usr_getutf		equ	0x0601
 kc_usr_getlang		equ	0x0610
 kc_usr_getcolors	equ	0x0611
+kc_usr_getst3d		equ	0x0612
 kc_net_send		equ	0x0700
 kc_net_recv		equ	0x0701
 kc_net_listusers	equ	0x0710
@@ -123,3 +125,29 @@ kc_net_setavail		equ	0x0720
 kc_net_getavail		equ	0x0721
 kc_tsk_query		equ	0x0800
 kc_tsk_discard		equ	0x0801
+
+;
+; User Library functions
+;
+
+us_ptr_set1i		equ	0xF000
+us_ptr_set1w		equ	0xF002
+us_ptr_set2i		equ	0xF004
+us_ptr_set2w		equ	0xF006
+us_ptr_set4i		equ	0xF008
+us_ptr_set4w		equ	0xF00A
+us_ptr_set8i		equ	0xF00C
+us_ptr_set8w		equ	0xF00E
+us_ptr_set16i		equ	0xF010
+us_ptr_set16w		equ	0xF012
+us_ptr_setgen16i	equ	0xF018
+us_ptr_setgen16w	equ	0xF01A
+us_ptr_setgen		equ	0xF01C
+us_copy_pfc		equ	0xF020
+us_copy_cfp		equ	0xF022
+us_copy_pfp		equ	0xF024
+us_copy_cfc		equ	0xF026
+us_set_p		equ	0xF028
+us_set_c		equ	0xF02A
+us_copy_pfp_l		equ	0xF02C
+us_set_p_l		equ	0xF02E

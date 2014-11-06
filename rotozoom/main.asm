@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.006"
-EngSpec db "00.012.000"
+Version db "00.000.007"
+EngSpec db "00.013.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -266,5 +266,3 @@ main:
 include "rledec.asm"
 include "effwave.asm"
 include "effrzoom.asm"
-include "../_userlib/copy.asm"
-include "../_userlib/ptr.asm"

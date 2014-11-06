@@ -18,9 +18,8 @@ Introduction
 A mix of simple to complex example applications to demonstrate the features of
 RRPGE, and to provide guidance for programming the RRPGE CPU.
 
-Currently transition is ongoing in accordance to Specification 00.011.003 and
-the oncoming 00.012.000. New, or rewised examples are released under the
-Temporary RRPGE License.
+Currently transition is ongoing in accordance to Specification 00.013.000. New
+or rewised examples are released under the Temporary RRPGE License.
 
 As of now only the following examples are functional: ::
 
@@ -47,10 +46,7 @@ User Library notes
 The directory "_userlib" contains common functions used by the examples. These
 functions in the future (beginning with the oncoming specification version
 00.013.000) will be part of a built-in library, accessible to every RRPGE
-Application. The library is going to be implemented as a complementary feature
-of the system, to be attached to emulators as a pre-compiled binary, showing
-on the high end of the Code address space with a well-defined (long term
-binary compatible) function entry point table.
+Application.
 
 
 
