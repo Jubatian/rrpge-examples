@@ -16,8 +16,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: RLE decoder"
-Version db "00.000.002"
-EngSpec db "00.013.000"
+Version db "00.000.003"
+EngSpec db "00.013.001"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -39,32 +39,11 @@ main:
 	jsv {kc_vid_mode, 0}
 
 	; Set up display list for 400 image lines. Will use entry 1 of the
-	; list for this.
+	; list for this. Clearing the list is not necessary since the default
+	; list for double scanned mode also only contained nonzero for entry
+	; 1 (every second entry 1 position in the 400 line list).
 
-	jfa us_ptr_set16i {3, 0x001F, 0xE000}
-	mov x0,    x3
-	mov xm0,   PTR16
-
-	; All, except entry 1 of the list is zero. Entry 1 need to populate
-	; the display (entry 0 would be background pattern).
-
-	mov a,     0		; Zero filler
-	mov b,     0x0000	; High part with the source line offsets
-	mov d,     0xC000	; Low part with the render mode & position
-	mov c,     400		; Line counter
-
-.l0:	mov [x0],  a		; Backround (entry 0)
-	mov [x0],  a		; Backround (entry 0)
-	mov [x0],  b		; Entry 1, high part
-	mov [x0],  d		; Entry 1, low part
-	mov [x0],  a		; Entry 2, empty
-	mov [x0],  a		; Entry 2, empty
-	mov [x0],  a		; Entry 3, empty
-	mov [x0],  a		; Entry 3, empty
-	add b,     5		; Next source line (16 * 5 = 80 cells wide)
-	sub c,     1
-	xeq c,     0
-	jms .l0
+	jfa us_dlist_sb_add {0x0000, 0xC000, 400, 1, 0}
 
 	; Copy RLE data into PRAM, above the display area
 
@@ -73,7 +52,6 @@ main:
 	; Load RLE image onto the display
 
 	jfa rledec {0x3, 0xE800, 0, 0x3000, 0x0000, 0x0000, 0x0010, 0x0000, 0x1230}
-
 
 	; Image on screen, just do an infinite loop
 
@@ -86,4 +64,3 @@ main:
 ;
 
 include "rledec.asm"
-

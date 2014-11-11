@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.007"
-EngSpec db "00.013.000"
+Version db "00.000.008"
+EngSpec db "00.013.001"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -78,32 +78,11 @@ main:
 	jsv {kc_vid_mode, 0}
 
 	; Set up display list for 400 image lines. Will use entry 1 of the
-	; list for this.
+	; list for this. Clearing the list is not necessary since the default
+	; list for double scanned mode also only contained nonzero for entry
+	; 1 (every second entry 1 position in the 400 line list).
 
-	jfa us_ptr_set16i {3, 0x001F, 0xE000}
-	mov xm0,   PTR16
-	mov x0,    x3
-
-	; All, except entry 1 of the list is zero. Entry 1 need to populate
-	; the display (entry 0 would be background pattern).
-
-	mov a,     0		; Zero filler
-	mov b,     0x0000	; High part with the source line offsets
-	mov d,     0xC000	; Low part with the render mode & position
-	mov c,     400		; Line counter
-
-.l0:	mov [x0],  a		; Backround (entry 0)
-	mov [x0],  a		; Backround (entry 0)
-	mov [x0],  b		; Entry 1, high part
-	mov [x0],  d		; Entry 1, low part
-	mov [x0],  a		; Entry 2, empty
-	mov [x0],  a		; Entry 2, empty
-	mov [x0],  a		; Entry 3, empty
-	mov [x0],  a		; Entry 3, empty
-	add b,     5		; Next source line (16 * 5 = 80 cells wide)
-	sub c,     1
-	xeq c,     0
-	jms .l0
+	jfa us_dlist_sb_add {0x0000, 0xC000, 400, 1, 0}
 
 	; Copy RLE (1927 words) data into PRAM (high half of bank 0)
 
@@ -251,7 +230,7 @@ main:
 	mov d,     x1
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
-	jfa offrzoom {320, 200, d, b, accrg}
+	jfa effrzoom {320, 200, d, b, accrg}
 
 	; Main loop ends
 

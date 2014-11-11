@@ -47,7 +47,7 @@ section code
 ;
 ; Registers C and X3 are not preserved.
 ;
-offrzoom:
+effrzoom:
 
 .xc	equ	0		; X effect center
 .yc	equ	1		; Y effect center
