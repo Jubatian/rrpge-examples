@@ -27,6 +27,7 @@ As of now only the following examples are functional: ::
     mouse
     rle
     rotozoom
+    gdgsprit
 
 
 Temporary license notes
