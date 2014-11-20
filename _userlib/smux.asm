@@ -1,5 +1,5 @@
 ;
-; RRPGE User Library functions - Display List sprites
+; RRPGE User Library functions - Display List sprite multiplexer
 ;
 ; Author    Sandor Zsuga (Jubatian)
 ; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
@@ -15,11 +15,9 @@
 ;
 ; Uses the following CPU RAM locations:
 ; 0xF800 - 0xF98F: Occupation data
-; 0xFADF: Clear rows (no sprites) on the top. Normally 0.
-; 0xFADE: Clear rows (no sprites) on the bottom. Normally 0.
-; 0xFADD: Clear columns on the front of the row. Normally 0.
-; 0xFADC: Clear columns on the end of the row. Normally 0.
-; 0xFADB: Bit0: if clear, indicates the occupation data is dirty.
+; 0xFADF: First column to use.
+; 0xFADE: Count of columns to use.
+; 0xFADD: Bit0: if clear, indicates the occupation data is dirty.
 ;
 ; Also adds a Page flip hook (to clear the occupation data).
 ;
@@ -41,21 +39,21 @@ section code
 ; Initializes display list occupation data for rendering a new frame according
 ; to the bounds in the internal data.
 ;
-us_dsprite_reset:
-	jma us_dsprite_reset_i
+us_smux_reset:
+	jma us_smux_reset_i
 
 
 
 ;
 ; Sets sprite area bounds
 ;
-; Param0: Top rows without sprites
-; Param1: Bottom rows without sprites
-; Param2: Clear columns on the front of the display list row
-; Param3: Clear columns on the end of the display list row
+; Param0: Column where the sprite region starts
+; Param1: Number of columns used by sprites
 ;
-us_dsprite_setbounds:
-	jma us_dsprite_setbounds_i
+; Registers C and X3 are not preserved.
+;
+us_smux_setbounds:
+	jma us_smux_setbounds_i
 
 
 
@@ -75,8 +73,8 @@ us_dsprite_setbounds:
 ; Registers C and X3 are not preserved. PRAM pointer 3 is used and not
 ; preserved. XM3 is assumed to be PTR16I.
 ;
-us_dsprite_add:
-	jma us_dsprite_add_i
+us_smux_add:
+	jma us_smux_add_i
 
 
 
@@ -99,8 +97,8 @@ us_dsprite_add:
 ; Registers C and X3 are not preserved. PRAM pointer 3 is used and not
 ; preserved. XM3 is assumed to be PTR16I.
 ;
-us_dsprite_addxy:
-	jma us_dsprite_addxy_i
+us_smux_addxy:
+	jma us_smux_addxy_i
 
 
 
@@ -118,30 +116,26 @@ us_dsprite_addxy:
 ; Registers C and X3 are not preserved. PRAM pointers 2 and 3 are used and not
 ; preserved. XM3 is assumed to be PTR16I.
 ;
-us_dsprite_addlist:
-	jma us_dsprite_addlist_i
+us_smux_addlist:
+	jma us_smux_addlist_i
 
 
 
 ; 0xF800 - 0xF98F: Occupation data
-us_dsprite_ola	equ	0xF800
-us_dsprite_ola8	equ	0xF000	; us_dsprite_ola << 1
-us_dsprite_ole	equ	0xF8C8
-us_dsprite_ole8	equ	0xF190	; us_dsprite_ole << 1
-us_dsprite_oha	equ	0xF8C8
-us_dsprite_oha8	equ	0xF190	; us_dsprite_oha << 1
-us_dsprite_ohe	equ	0xF990
-us_dsprite_ohe8	equ	0xF320	; us_dsprite_ohe << 1
-; 0xFADF: Clear rows on top
-us_dsprite_rt	equ	0xFADF
-; 0xFADE: Clear rows on bottom
-us_dsprite_rb	equ	0xFADE
-; 0xFADD: Clear graphics cols on the front
-us_dsprite_cf	equ	0xFADD
-; 0xFADC: Clear graphics cols on the end
-us_dsprite_ce	equ	0xFADC
-; 0xFADB: Dirty flag on bit 0: clear if dirty.
-us_dsprite_df	equ	0xFADB
+us_smux_ola	equ	0xF800
+us_smux_ola8	equ	0xF000	; us_smux_ola << 1
+us_smux_ole	equ	0xF8C8
+us_smux_ole8	equ	0xF190	; us_smux_ole << 1
+us_smux_oha	equ	0xF8C8
+us_smux_oha8	equ	0xF190	; us_smux_oha << 1
+us_smux_ohe	equ	0xF990
+us_smux_ohe8	equ	0xF320	; us_smux_ohe << 1
+; 0xFADF: Column to start at
+us_smux_cs	equ	0xFADF
+; 0xFADE: Count of columns
+us_smux_cc	equ	0xFADE
+; 0xFADD: Dirty flag on bit 0: clear if dirty.
+us_smux_df	equ	0xFADD
 
 
 
@@ -154,7 +148,7 @@ us_dsprite_df	equ	0xFADB
 ;
 ; The display list pointer is set up to stationary 16 bits.
 ;
-us_dsprite_setptr_i:
+us_smux_setptr_i:
 
 .psy	equ	0		; Y position
 .dld	equ	1		; Display List Definition
@@ -220,164 +214,106 @@ us_dsprite_setptr_i:
 
 
 ;
-; Internal function to reset an area of the occupation list
+; Implementation of us_smux_reset
 ;
-; Param0: Start row
-; Param1: Count of rows
-; Param2: Low bound (1 for first graphics column)
-; Param3: High bound (first non-usable column)
-;
-us_dsprite_clear_i:
-
-.sta	equ	0		; Start row
-.cnt	equ	1		; Count of rows (must not be 0)
-.bnl	equ	2		; Low bound
-.bnh	equ	3		; High bound
-
-	mov sp,    6
-
-	; Save CPU regs
-
-	xch a,     [$.bnl]	; Load low bound & save 'a'
-	mov c,     [$.bnh]	; Load high bound
-	xch x0,    [$.sta]	; Load start row & save 'x0'
-	mov [$4],  xm
-	mov [$5],  xh
-
-	; Init pointers
-
-	mov xm,    0x8888	; PTR8I for all
-	mov xh,    0x1111	; 8 bit pointers, they are on the high end
-	add x0,    us_dsprite_ola8
-	mov x3,    x0
-	add x3,    400		; High bounds offset
-
-	; Init loop
-
-	add [$.cnt], x0		; Termination point
-
-	; Clear. Not much optimized, it could be faster with some unrolling or
-	; word operations instead of byte, but for no much gain: the overall
-	; bottleneck is rather the output of sprites.
-
-.lp:	mov [x0],  a
-	mov [x3],  c
-	xeq x0,    [$.cnt]
-	jms .lp
-
-	; Restore CPU regs & exit
-
-	mov a,     [$.bnl]
-	mov x0,    [$.sta]
-	mov xm,    [$4]
-	mov xh,    [$5]
-	rfn
-
-
-
-;
-; Implementation of us_dsprite_reset
-;
-us_dsprite_reset_i:
+us_smux_reset_i:
 
 	; Check dirty, do nothing unless it is necessary to clear
 
-	xbc [us_dsprite_df], 0
+	xbc [us_smux_df], 0
 	rfn			; No need to clear, already OK
-	bts [us_dsprite_df], 0
+	bts [us_smux_df], 0
 
 	; Save CPU regs
 
-	mov sp,    3
+	mov sp,    4
 	mov [$0],  a
-	mov [$1],  b
-	mov [$2],  d
+	mov [$1],  d
+	mov [$2],  x2
+	mov [$3],  xm
 
-	; Get total height
+	; Get total height & Display list size
 
-	mov d,     200
-	xbs [P_GDG_DLDEF], 13	; Double scanned display?
-	shl d,     1		; Make it 400 lines if not double scanned
-
-	; Clear top part
-
-	mov a,     [us_dsprite_rt]
-	xug d,     a
-	mov a,     d
-	xeq a,     0
-	jfa us_dsprite_clear_i {0, a, 0, 0}
-
-	; Clear mid part using the column bounds
-
-	mov b,     [us_dsprite_ce]
 	mov c,     [P_GDG_DLDEF]
+	mov d,     100		; 'd': Height: 200 lines (1 word: 2 lines)
+	xbs c,     13		; Double scanned display?
+	shl d,     1		; Make it 400 lines if not double scanned
 	mov x3,    4		; Smallest display list size is normally 4 entries
 	xbc c,     13		; Double scan?
 	mov x3,    8		; But 8 entries when double scanned
 	and c,     3
-	shl x3,    c		; Count of entries on a display list row
-	xug x3,    b
-	mov b,     x3
-	sub x3,    b		; End bound in 'x3' (first non-available column)
-	mov c,     [us_dsprite_rb]
-	mov b,     d		; 'd': 200 / 400 total lines
-	sub b,     a		; Previous (top excluded part) count
-	xug b,     c		; Bottom excluded part count
-	mov b,     c
-	sub b,     c		; Count of rows in 'b'
-	mov c,     [us_dsprite_cf]
-	xne c,     0
-	mov c,     1		; Background column can never be used
-	xug x3,    c		; Can not be larger than the end bound
-	mov c,     x3		; Front bound in 'c' (first available column)
-	xeq b,     0
-	jfa us_dsprite_clear_i {a, b, c, x3}
+	shl x3,    c		; 'x3': Count of entries on a display list row
 
-	; Clear bottom part
+	; Calculate bottom end fill value
 
-	add a,     b		; Start offset
-	sub d,     a		; Count: all what is remaining ('d': 200 / 400 total lines)
-	xeq d,     0
-	jfa us_dsprite_clear_i {a, d, 0, 0}
+	mov a,     [us_smux_cs]
+	mov c,     a		; For top end
+	xug x3,    a
+	mov a,     x3		; Too large: constrain
+	mov x2,    a
+	shl x2,    8
+	or  a,     x2		; 'a': Bottom end fill value
 
-;jfa us_dsprite_clear_i {0, 400, 9, 22}
+	; Calculate top end fill value
+
+	add c,     [us_smux_cc]
+	xug x3,    c
+	mov c,     x3		; Too large: constrain
+	mov x2,    c
+	shl x2,    8
+	or  c,     x2		; 'c': Top end fill value
+
+	; Prepare pointers
+
+	mov xm,    0x6666	; All pointers PTR16I
+	mov x2,    us_smux_ola
+	mov x3,    us_smux_oha
+	add d,     x2		; Loop terminator
+
+	; Clear loop
+
+.lp:	mov [x2],  a
+	mov [x3],  c
+	mov [x2],  a
+	mov [x3],  c
+	mov [x2],  a
+	mov [x3],  c
+	mov [x2],  a
+	mov [x3],  c
+	xeq x2,    d
+	jms .lp
 
 	; Restore CPU regs & exit
 
 	mov a,     [$0]
-	mov b,     [$1]
-	mov d,     [$2]
+	mov d,     [$1]
+	mov x2,    [$2]
+	mov xm,    [$3]
 	rfn
 
 
 
 ;
-; Implementation of us_dsprite_setbounds
+; Implementation of us_smux_setbounds
 ;
-us_dsprite_setbounds_i:
+us_smux_setbounds_i:
 
-.trn	equ	0		; Top rows without sprites
-.brn	equ	1		; Bottom rows without sprites
-.fcn	equ	2		; Front columns without sprites
-.ecn	equ	3		; End columns without sprites
+.cls	equ	0		; Start column
+.clc	equ	1		; Count of columns
 
-	mov c,     [$.trn]
-	mov [us_dsprite_rt], c
-	mov c,     [$.brn]
-	mov [us_dsprite_rb], c
-	mov c,     [$.fcn]
-	mov [us_dsprite_cf], c
-	mov c,     [$.ecn]
-	mov [us_dsprite_ce], c
-	btc [us_dsprite_df], 0	; Mark dirty
+	mov c,     [$.cls]
+	mov [us_smux_cs], c
+	mov c,     [$.clc]
+	mov [us_smux_cc], c
+	btc [us_smux_df], 0	; Mark dirty
 	rfn
 
 
 
 ;
-; Implementation of us_dsprite_add
+; Implementation of us_smux_add
 ;
-us_dsprite_add_i:
+us_smux_add_i:
 
 .rch	equ	0		; Render command, high
 .rcl	equ	1		; Render command, low
@@ -446,16 +382,16 @@ us_dsprite_add_i:
 
 	; Rows will be added, so dirty flag will indicate the need to clear
 
-	btc [us_dsprite_df], 0
+	btc [us_smux_df], 0
 
 	; Set up PRAM pointer 3
 
-	jfa us_dsprite_setptr_i {[$.psy], [$.dld]}
+	jfa us_smux_setptr_i {[$.psy], [$.dld]}
 
 	; Set up X0 and X1 for pointing into the occupation data
 
 	mov xh,    0x1111	; 8 bit pointers, they are on the high end
-	mov x0,    us_dsprite_ola8
+	mov x0,    us_smux_ola8
 	add x0,    [$.psy]	; Low bounds offset
 	mov x1,    x0
 	add x1,    400		; High bounds offset
@@ -466,7 +402,7 @@ us_dsprite_add_i:
 	mov b,     [$.rcl]	; Low part (does not change)
 
 	; Loop init (in x3 the add value for display list row walking was
-	; prepared by us_dsprite_setptr_i)
+	; prepared by us_smux_setptr_i)
 
 	add [$.hgt], x0		; Top bound by offset
 	mov d,     x3
@@ -538,9 +474,9 @@ us_dsprite_add_i:
 
 
 ;
-; Implementation of us_dsprite_addxy
+; Implementation of us_smux_addxy
 ;
-us_dsprite_addxy_i:
+us_smux_addxy_i:
 
 .rch	equ	0		; Render command, high
 .rcl	equ	1		; Render command, low
@@ -604,7 +540,7 @@ us_dsprite_addxy_i:
 	; Check on-screen
 
 	xug x3,    a		; Off-screen to the right?
-	jms us_dsprite_add_i.exit
+	jms us_smux_add_i.exit
 	xbs a,     15		; Signed? If so, maybe partly on-screen on left.
 	jms .onsc
 
@@ -618,7 +554,7 @@ us_dsprite_addxy_i:
 	shl d,     x3		; Width of graphic element in pixels
 	add d,     a
 	xsg d,     0		; 1 or more (signed): graphics is on-screen
-	jms us_dsprite_add_i.exit
+	jms us_smux_add_i.exit
 
 	; Graphics on-screen, render it
 
@@ -627,14 +563,14 @@ us_dsprite_addxy_i:
 	mov d,     0xFC00	; Preserve high part of command
 	and [$.rcl], d
 	or  [$.rcl], a
-	jms us_dsprite_add_i.entr
+	jms us_smux_add_i.entr
 
 
 
 ;
-; Implementation of us_dsprite_addlist
+; Implementation of us_smux_addlist
 ;
-us_dsprite_addlist_i:
+us_smux_addlist_i:
 
 .clh	equ	0		; Command list offset, high
 .cll	equ	1		; Command list offset, low
@@ -690,23 +626,23 @@ us_dsprite_addlist_i:
 
 	; Rows will be added, so dirty flag will indicate the need to clear
 
-	btc [us_dsprite_df], 0
+	btc [us_smux_df], 0
 
 	; Set up PRAM pointers
 
-	jfa us_dsprite_setptr_i {[$.psy], [$.dld]}
+	jfa us_smux_setptr_i {[$.psy], [$.dld]}
 	jfa us_ptr_set16i {2, [$.clh], [$.cll]}
 
 	; Set up X0 and X1 for pointing into the occupation data
 
 	mov xh,    0x1111	; 8 bit pointers, they are on the high end
-	mov x0,    us_dsprite_ola8
+	mov x0,    us_smux_ola8
 	add x0,    [$.psy]	; Low bounds offset
 	mov x1,    x0
 	add x1,    400		; High bounds offset
 
 	; Loop init (in x3 the add value for display list row walking was
-	; prepared by us_dsprite_setptr_i)
+	; prepared by us_smux_setptr_i)
 
 	add [$.hgt], x0		; Top bound by offset
 	mov d,     x3

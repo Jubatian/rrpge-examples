@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.005"
+Version db "00.000.006"
 EngSpec db "00.013.001"
 License db "RRPGEvt", "\n"
         db 0
@@ -86,9 +86,9 @@ section code
 	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x0083, 0}
 	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x00A3, 0}
 
-	; Prepare sprites: give columns 9 - 31 inclusive to them.
+	; Prepare sprites: give columns 9 - 31 inclusive (23 cols) to them.
 
-	jfa us_dsprite_setbounds {0, 0, 9, 0}
+	jfa us_smux_setbounds {9, 23}
 
 	; Prepare for double buffering, setting the display lists.
 	; Display list clear setup: needs to clear the background and columns
@@ -101,7 +101,7 @@ section code
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
 	jfa us_dbuf_init {0x0083, 0x00A3, 0x4A18}
-	jfa us_dbuf_addfliphook {us_dsprite_reset}
+	jfa us_dbuf_addfliphook {us_smux_reset}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -422,7 +422,7 @@ rendertext:
 	xne x3,    0
 	jms .nsp		; Zero render command: no sprite to draw
 	add b,     d		; Row adjust Y
-	jfa us_dsprite_addxy {x3, 0x8000, 16, 0, a, b}
+	jfa us_smux_addxy {x3, 0x8000, 16, 0, a, b}
 .nsp:	add a,     20		; Next X position
 	xeq x1,    [$.cpe]	; Inner (X) loop terminates after 30 chars
 	jms .l1
@@ -483,4 +483,4 @@ getcharcomm:
 ;
 
 include "rledec.asm"
-include "../_userlib/dsprite.asm"
+include "../_userlib/smux.asm"
