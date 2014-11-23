@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.006"
-EngSpec db "00.013.001"
+Version db "00.000.007"
+EngSpec db "00.013.004"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -101,7 +101,6 @@ section code
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
 	jfa us_dbuf_init {0x0083, 0x00A3, 0x4A18}
-	jfa us_dbuf_addfliphook {us_smux_reset}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -483,4 +482,3 @@ getcharcomm:
 ;
 
 include "rledec.asm"
-include "../_userlib/smux.asm"
