@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.009"
-EngSpec db "00.013.001"
+Version db "00.000.010"
+EngSpec db "00.014.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -60,13 +60,6 @@ reimp:				; Reindex map (darkening when source is darker)
 	dw 0x0901, 0x0903, 0x0905, 0x0607, 0x0809, 0x090B, 0x0C0D, 0x090F	; F
 reimp_end:
 
-accrg:				; 5 accelerator registers for rotozoom
-	dw 0x00F0		; Source partition, X/Y split irrelevant, destination full.
-	dw 0x0000		; Substitutions irrelevant, no barrel rotation / colorkey.
-	dw 0xFF00		; Source AND mask: no effect (set), no colorkey.
-	dw 0x0000		; Reindex bank irrelevant (by destination).
-	dw 0x3000		; Reindex by destination mode, no OR mask, 4 bit mode
-
 
 
 section code
@@ -96,52 +89,42 @@ main:
 
 	mov xm2,   PTR16
 	mov x2,    P_GFIFO_DATA
-	mov a,     0x8016	; Accelerator X pointers & increments
+	mov a,     0x8002	; Destination settings
 	mov [P_GFIFO_ADDR], a
-	mov a,     0x0000
-	mov [x2],  a		; Source X whole
-	mov a,     0x0000
-	mov [x2],  a		; Source X fraction
-	mov a,     0x0001
-	mov [x2],  a		; Source X increment whole
-	mov a,     0x0000
-	mov [x2],  a		; Source X increment fraction
-	mov a,     0x0050
-	mov [x2],  a		; Source X post-add whole
-	mov a,     0x0000
-	mov [x2],  a		; Source X post-add fraction
-	mov a,     0x0000
-	mov [x2],  a		; Destination whole
-	mov a,     0x0000
-	mov [x2],  a		; Destination fraction
-	mov a,     0x0001
-	mov [x2],  a		; Destination increment
-	mov a,     0x0080
-	mov [x2],  a		; Destination post-add
-	mov a,     0x8004	; Accelerator source bank select
-	mov [P_GFIFO_ADDR], a
-	mov a,     0
-	mov [x2],  a		; Source bank select
 	mov a,     1
 	mov [x2],  a		; Destination bank select
 	mov a,     0
-	mov [x2],  a		; Source partition select
-	mov a,     0
 	mov [x2],  a		; Destination partition select
+	mov a,     0x0080
+	mov [x2],  a		; Destination post-add whole
+	mov a,     0x800A	; Pointer X post-add
+	mov [P_GFIFO_ADDR], a
+	mov a,     0x0050
+	mov [x2],  a		; Pointer X post-add whole
+	mov a,     0x8012	; Source bank & partition
+	mov [P_GFIFO_ADDR], a
+	mov a,     0
+	mov [x2],  a		; Source bank select
+	mov a,     0
+	mov [x2],  a		; Source partition select
 	mov a,     0xFFF0
 	mov [x2],  a		; Partitioning settings
 	mov a,     0x0000
-	mov [x2],  a		; Substitutions, source barrel rotate, colorkey flag
+	mov [x2],  a		; Blit control flags (BB, 4 bit, no colorkey), source barrel rot.
 	mov a,     0xFF00
 	mov [x2],  a		; Source AND mask and colorkey
-	mov a,     0
-	mov [x2],  a		; Reindex bank select
-	mov a,     0x0000
-	mov [x2],  a		; Blit mode (BB, no reindex, 4 bit, no mirror, no OR)
 	mov a,     400
 	mov [x2],  a		; 400 lines
-	mov a,     640
-	mov [x2],  a		; 640 pixels / line
+	mov a,     80
+	mov [x2],  a		; 80 cells / line
+	mov [P_GFIFO_ADDR], x2	; Skip count of cells, fractional
+	mov a,     0x0000
+	mov [x2],  a		; Pointer X whole
+	mov [P_GFIFO_ADDR], x2	; Skip pointer X, fractional
+	mov a,     0
+	mov [x2],  a		; Destination whole
+	mov [x2],  a		; Destination fraction
+	mov [x2],  a		; Reindexing & Pixel OR mask
 	mov [x2],  a		; Start trigger
 
 	; Set up reindex table by feeding it into the Graphics FIFO.
@@ -156,30 +139,42 @@ main:
 
 	; Set up Accelerator for rotozooming
 
-	mov c,     0x8004	; FIFO: Accelerator source bank select
+	mov c,     0x8002	; Destination settings
+	mov [P_GFIFO_ADDR], c
+	mov a,     0
+	mov [x2],  a		; Destination bank select
+	mov [x2],  a		; Destination partition select
+	mov a,     0x0050
+	mov [x2],  a		; Destination post-add whole
+	mov a,     0
+	mov [x2],  a		; Destination post-add fraction
+	mov [x2],  a		; Count post-add whole
+	mov [x2],  a		; Count post-add fraction
+	mov c,     0x8012	; Source settings etc.
 	mov [P_GFIFO_ADDR], c
 	mov a,     1
 	mov [x2],  a		; Source bank select
 	mov a,     0
-	mov [x2],  a		; Destination bank select
 	mov [x2],  a		; Source partition select
-	mov [x2],  a		; Destination partition select
-	mov c,     0x800D	; FIFO: Accelerator row count
-	mov [P_GFIFO_ADDR], c
+	mov a,     0xF6F0
+	mov [x2],  a		; Partitioning settings (Full source bank, X/Y split at 128 cells, Full destination bank)
+	mov a,     0x0040
+	mov [x2],  a		; Blit control flags (SC, 4 bit, no colorkey), source barrel rot.
+	mov a,     0xFF00
+	mov [x2],  a		; Source AND mask and colorkey
 	mov a,     400
 	mov [x2],  a		; 400 lines
-	mov a,     640
-	mov [x2],  a		; 640 pixels / line
-	mov c,     0x801C	; FIFO: Destination whole
+	mov a,     80
+	mov [x2],  a		; 80 cells / line
+	mov a,     0
+	mov [x2],  a		; No fractional for count
+	mov c,     0x801C	; Destination start
 	mov [P_GFIFO_ADDR], c
-	mov a,     0x0000	; Destination whole
-	mov [x2],  a
-	mov a,     0x0000	; Destination fraction
-	mov [x2],  a
-	mov a,     0x0001	; Destination increment
-	mov [x2],  a
-	mov a,     0x0050	; Destination post-add
-	mov [x2],  a
+	mov a,     0
+	mov [x2],  a		; Destination whole
+	mov [x2],  a		; Destination fraction
+	mov a,     0x6000	; Reindex by destination mode, no OR mask
+	mov [x2],  a		; Reindexing & Pixel OR mask
 
 	; Enter main loop. The real time synchronization is based on the
 	; 187.5Hz clock, divided by 2 to get a roughly 94Hz base tick. x1 will
@@ -230,7 +225,7 @@ main:
 	mov d,     x1
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
-	jfa effrzoom {320, 200, d, b, accrg}
+	jfa effrzoom {320, 200, d, b}
 
 	; Main loop ends
 

@@ -27,23 +27,19 @@ section code
 ; Uses the large sine table in the CPU RAM (0xFE00 - 0xFFFF), so rotation is 9
 ; bits.
 ;
-; It takes accelerator parameters 0x008 - 0x00C by pointer from memory. It
-; only forces elements of these if they are necessary for the rotozoom, so it
-; should be set up by the requirements before starting.
+; Only Pointer X and Pointer Y registers are set up (increments, post-adds,
+; start offsets) according to the rotation, the rest of the accelerator
+; registers are not altered (except for 0x801F, the start trigger, but the
+; value written in it is irrelevant for the Scaled Blitter).
 ;
-; The following registers of the Accelerator are not altered:
-; 0x000 - 0x001: PRAM write mask
-; 0x004 - 0x005: Source & Destination bank selects
-; 0x006:         Source partition select (ignored since whole bank is used)
-; 0x007:         Destination partition select
-; 0x00D - 0x00E: Count of rows & Count of pixels to blit (dimensions)
-; 0x01C - 0x01F: Destination configuration
+; The Blit control flags (0x8015) should be set up for Scaled blitter (bit 6
+; set, bit 5 clear), and the Partition settings for an 1024 x 512 source
+; (0xF6 for the high 8 bits).
 ;
 ; param0: X effect center
 ; param1: Y effect center
 ; param2: Rotation (9 bits)
 ; param3: Zoom (0x100: 1:1, no zooming)
-; param4: Accelerator parameter source offset (for 0x009 - 0x00C)
 ;
 ; Registers C and X3 are not preserved.
 ;
@@ -53,25 +49,24 @@ effrzoom:
 .yc	equ	1		; Y effect center
 .rt	equ	2		; Rotation
 .zm	equ	3		; Zoom
-.acp	equ	4		; Accelerator parameter source
-.xh	equ	6		; X effect center high
-.yh	equ	7		; Y effect center high
-.t0h	equ	8		; sin(rt)
-.t0l	equ	9
-.t1h	equ	10		; -sin(rt)
-.t1l	equ	11
-.t2h	equ	12		; cos(rt)
-.t2l	equ	13
-.t3h	equ	14		; 1-cos(rt)
-.t3l	equ	15
+.xh	equ	4		; X effect center high
+.yh	equ	5		; Y effect center high
+.t0h	equ	6		; sin(rt)
+.t0l	equ	7
+.t1h	equ	8		; -sin(rt)
+.t1l	equ	9
+.t2h	equ	10		; cos(rt)
+.t2l	equ	11
+.t3h	equ	12		; 1-cos(rt)
+.t3l	equ	13
 
-	mov sp,    23		; Reserve some space on the stack
+	mov sp,    21		; Reserve some space on the stack
 
 	; Save CPU registers
 
-	mov [$16], xm
+	mov [$14], xm
 	mov xm,    0x6466	; x3: PTR16I, x2: PTR16, rest: don't care
-	mov x3,    17
+	mov x3,    15
 	mov [$x3], x2
 	mov [$x3], x1
 	mov [$x3], x0
@@ -127,13 +122,13 @@ effrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov c,     0x8018	; X increment on accelerator
+	mov c,     0x800E	; X increment on accelerator
 	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x3	; X increment whole
 	mov [P_GFIFO_DATA], x2	; X increment fraction
 	asr c:x1,  1		; 8 - 1; Width of data: 128 cells
 	src x0,    1
-	mov c,     0x8014	; Y post-add on accelerator
+	mov c,     0x8008	; Y post-add on accelerator
 	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x1	; Y post-add whole
 	mov [P_GFIFO_DATA], x0	; Y post-add fraction
@@ -145,8 +140,6 @@ effrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov c,     0x801A	; X post-add on accelerator
-	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x3	; X post-add whole
 	mov [P_GFIFO_DATA], x2	; X post-add fraction
 	mov x3,    0
@@ -155,8 +148,6 @@ effrzoom:
 	sbc x3,    x1
 	asr c:x3,  1		; 8 - 1; Width of data: 128 cells
 	src x2,    1
-	mov c,     0x8012	; Y increment on accelerator
-	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x3	; Y increment whole
 	mov [P_GFIFO_DATA], x2	; Y increment fraction
 
@@ -243,49 +234,30 @@ effrzoom:
 	; Submit source start to the accelerator
 
 	mov x2,    P_GFIFO_DATA	; FIFO data receive offset. Will save some words below.
-	mov c,     0x8010	; Source Y whole
+	mov c,     0x8010	; Pointer Y whole
 	mov [P_GFIFO_ADDR], c
 	mov [x2],  b		; Whole
 	mov [x2],  a		; Fraction
-	mov c,     0x8016	; Source X whole
+	mov c,     0x801A	; Pointer X whole
 	mov [P_GFIFO_ADDR], c
 	mov [x2],  x1		; Whole
 	mov [x2],  x0		; Fraction
 
-	; Walk through the 5 provided accelerator register values, and submit
-	; them to the accelerator after altering as needed.
+	; Start operation
 
-	mov c,     0x8008
-	mov [P_GFIFO_ADDR], c	; FIFO address
-	mov x3,    [$.acp]
-	mov a,     [x3]
-	and a,     0x00FF	; Source partition size & X/Y split masked off
-	or  a,     0xF600	; Source partition size is 64K cells, split is at 128 cells
-	mov [x2],  a
-	mov a,     [x3]
-	and a,     0x1FFF	; Don't substitue anything, but keep barrel rotate / colorkey setting.
-	mov [x2],  a
-	mov a,     [x3]
-	mov [x2],  a		; Masks used as-is.
-	mov a,     [x3]
-	mov [x2],  a		; Reindexing used as-is.
-	mov a,     [x3]
-	and a,     0xF3FF	; Clear mode setting
-	or  a,     0x0800	; Set scaled blitter
-	mov [x2],  a
-	mov [P_GFIFO_ADDR], x2	; Skip row count.
-	mov [P_GFIFO_ADDR], x2	; Skip pixel count.
-	mov [x2],  a		; FIFO starts, accelerator blits
+	mov c,     0x801F
+	mov [P_GFIFO_ADDR], c
+	mov [x2],  c		; FIFO starts, accelerator blits
 
 	; Restore CPU registers & Exit
 
-	mov x3,    17
+	mov x3,    15
 	mov x2,    [$x3]
 	mov x1,    [$x3]
 	mov x0,    [$x3]
 	mov a,     [$x3]
 	mov b,     [$x3]
 	mov d,     [$x3]
-	mov xm,    [$16]
+	mov xm,    [$14]
 
 	rfn
