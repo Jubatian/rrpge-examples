@@ -2,6 +2,10 @@
 RRPGE Example applications
 ==============================================================================
 
+.. image:: https://cdn.rawgit.com/Jubatian/rrpge-spec/00.013.002/logo_txt.svg
+   :align: center
+   :width: 100%
+
 :Author:    Sandor Zsuga (Jubatian)
 :Copyright: 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
             License) extended as RRPGEvt (temporary version of the RRPGE
@@ -30,6 +34,16 @@ As of now only the following examples are functional: ::
     gdgsprit
 
 
+Related projects
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- RRPGE home: http://www.rrpge.org
+- RRPGE Specification: https://www.github.com/Jubatian/rrpge-spec
+- RRPGE Assembler: https://www.github.com/Jubatian/rrpge-asm
+- RRPGE Emulator & Library: https://www.github.com/Jubatian/rrpge-libminimal
+- RRPGE User Library: https://www.github.com/Jubatian/rrpge-userlib
+
+
 Temporary license notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -39,15 +53,6 @@ allowing for creating derivative works (most importantly, applications) under
 other licenses than GPL.
 
 For more information, see http://www.rrpge.org/community/index.php?topic=30.0
-
-
-User Library notes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The directory "_userlib" contains common functions used by the examples. These
-functions in the future (beginning with the oncoming specification version
-00.013.000) will be part of a built-in library, accessible to every RRPGE
-Application.
 
 
 

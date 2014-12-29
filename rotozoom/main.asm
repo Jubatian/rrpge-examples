@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.010"
-EngSpec db "00.014.000"
+Version db "00.000.011"
+EngSpec db "00.015.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -137,17 +137,15 @@ main:
 	xeq x3,    reimp_end
 	jms .rlop
 
-	; Set up Accelerator for rotozooming
+	; Set up Accelerator for rotozooming. The destination again is bank 0,
+	; where the default surface is (so just load destination surface from
+	; there).
 
-	mov c,     0x8002	; Destination settings
+	jfa us_dsurf_getacc {up_dsurf}
+
+	mov c,     0x8006
 	mov [P_GFIFO_ADDR], c
 	mov a,     0
-	mov [x2],  a		; Destination bank select
-	mov [x2],  a		; Destination partition select
-	mov a,     0x0050
-	mov [x2],  a		; Destination post-add whole
-	mov a,     0
-	mov [x2],  a		; Destination post-add fraction
 	mov [x2],  a		; Count post-add whole
 	mov [x2],  a		; Count post-add fraction
 	mov c,     0x8012	; Source settings etc.

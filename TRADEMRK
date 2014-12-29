@@ -1,8 +1,9 @@
 Trademarks incorporated in the project:
 
-"logo.png" in the project root: the RRPGE logo. Trademark registration
-pending, rights owned by Sandor Zsuga (Jubatian; http://www.jubatian.org).
-The RRPGE logo shall not be used in derivative works without permission.
+"logo.svg" and "logo_txt.svg" in the project root: the RRPGE logo. Registered
+European Trademark, rights owned by Sandor Zsuga (Jubatian;
+http://www.jubatian.org). References to this file occur in "README.rst". The
+RRPGE logo shall not be used in derivative works without permission.
 
 "logo_rle.bin": the RRPGE logo. This may be replaced using the "makerle.c"
 program using the instructions placed in the program source.
