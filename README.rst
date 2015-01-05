@@ -27,8 +27,9 @@ or rewised examples are released under the Temporary RRPGE License.
 
 As of now only the following examples are functional: ::
 
-    simplegf
+    charmat
     mouse
+    simplegf
     rle
     rotozoom
     gdgsprit
