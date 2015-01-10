@@ -28,11 +28,12 @@ or rewised examples are released under the Temporary RRPGE License.
 As of now only the following examples are functional: ::
 
     charmat
+    gdgsprit
     mouse
-    simplegf
     rle
     rotozoom
-    gdgsprit
+    simplegf
+    tilemap
 
 
 Related projects
