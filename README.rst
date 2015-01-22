@@ -32,6 +32,7 @@ As of now only the following examples are functional: ::
     mouse
     rle
     rotozoom
+    scrollmp
     simplegf
     tilemap
 
