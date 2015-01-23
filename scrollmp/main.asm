@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.000"
+Version db "00.000.001"
 EngSpec db "00.015.003"
 License db "RRPGEvt", "\n"
         db 0
@@ -92,14 +92,14 @@ main:
 
 	jfa us_ptr_set16i {3, 0x0002, 0x0000}
 	mov c,    256
-.l0:	mov b,    256
-.l1:	mov a,    c
+.l0:	sub c,    1
+	mov b,    256
+.l1:	sub b,    1
+	mov a,    c
 	xor a,    b
 	mov [P3_RW], a
-	sub b,    1
 	xeq b,    0
 	jms .l1
-	sub c,    1
 	xeq c,    0
 	jms .l0
 
