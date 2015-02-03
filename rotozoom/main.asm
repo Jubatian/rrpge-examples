@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.011"
-EngSpec db "00.015.000"
+Version db "00.000.012"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -91,8 +91,8 @@ main:
 	mov x2,    P_GFIFO_DATA
 	mov a,     0x8002	; Destination settings
 	mov [P_GFIFO_ADDR], a
-	mov a,     1
-	mov [x2],  a		; Destination bank select
+	mov a,     0xF001
+	mov [x2],  a		; Destination bank select & partitioning settings
 	mov a,     0
 	mov [x2],  a		; Destination partition select
 	mov a,     0x0080
@@ -107,7 +107,7 @@ main:
 	mov [x2],  a		; Source bank select
 	mov a,     0
 	mov [x2],  a		; Source partition select
-	mov a,     0xFFF0
+	mov a,     0xFF00
 	mov [x2],  a		; Partitioning settings
 	mov a,     0x0000
 	mov [x2],  a		; Blit control flags (BB, 4 bit, no colorkey), source barrel rot.
@@ -154,8 +154,8 @@ main:
 	mov [x2],  a		; Source bank select
 	mov a,     0
 	mov [x2],  a		; Source partition select
-	mov a,     0xF6F0
-	mov [x2],  a		; Partitioning settings (Full source bank, X/Y split at 128 cells, Full destination bank)
+	mov a,     0xF600
+	mov [x2],  a		; Source partitioning settings (Full source bank, X/Y split at 128 cells)
 	mov a,     0x0040
 	mov [x2],  a		; Blit control flags (SC, 4 bit, no colorkey), source barrel rot.
 	mov a,     0xFF00
