@@ -142,8 +142,10 @@ us_ptr_set8i		equ	0xE00C
 us_ptr_set8w		equ	0xE00E
 us_ptr_set16i		equ	0xE010
 us_ptr_set16w		equ	0xE012
-us_ptr_setgen16i	equ	0xE018
-us_ptr_setgen16w	equ	0xE01A
+us_ptr_setwi		equ	0xE014
+us_ptr_setww		equ	0xE016
+us_ptr_setgenwi		equ	0xE018
+us_ptr_setgenww		equ	0xE01A
 us_ptr_setgen		equ	0xE01C
 us_copy_pfc		equ	0xE020
 us_copy_cfp		equ	0xE022
@@ -203,10 +205,10 @@ us_rec16		equ	0xE08C
 us_rec32		equ	0xE08E
 us_sqrt16		equ	0xE090
 us_sqrt32		equ	0xE092
-us_dsurf_set		equ	0xE094
-us_dsurf_setdbuf	equ	0xE096
-us_dsurf_setm		equ	0xE098
-us_dsurf_setmdbuf	equ	0xE09A
+us_dsurf_new		equ	0xE094
+us_dsurf_newdbuf	equ	0xE096
+us_dsurf_newm		equ	0xE098
+us_dsurf_newmdbuf	equ	0xE09A
 us_dsurf_get		equ	0xE09C
 us_dsurf_getacc		equ	0xE09E
 us_dsurf_getpw		equ	0xE0A0
@@ -230,7 +232,7 @@ us_tmap_gettilehw	equ	0xE0C2
 us_tmap_gettile		equ	0xE0C4
 us_tmap_settile		equ	0xE0C6
 us_tmap_setptr		equ	0xE0C8
-us_fastmap_set		equ	0xE0CA
+us_fastmap_new		equ	0xE0CA
 us_fastmap_mark		equ	0xE0CC
 us_fastmap_gethw	equ	0xE0CE
 us_fastmap_getyx	equ	0xE0D0
@@ -241,8 +243,8 @@ us_fastmap_draw		equ	0xE0D4
 ; User Library locations (pointers)
 ;
 
-up_font_4		equ	0xFA90
-up_font_4i		equ	0xFA98
+up_font_4		equ	0xFA9C
+up_font_4i		equ	0xFAA4
 up_font_8		equ	0xFAAC
 up_font_8i		equ	0xFAB4
 up_dsurf		equ	0xFAC0

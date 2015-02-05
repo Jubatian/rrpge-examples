@@ -71,7 +71,7 @@ effwave:
 
 	mov c,     [$.dls]
 	shl c,     1		; 2 words for a display list entry
-	jfa us_ptr_setgen16w {2, [$.doh], [$.dol], 0, c}
+	jfa us_ptr_setgenww {2, [$.doh], [$.dol], 0, c}
 
 	; Prepare pointer for sine source (in 'd', the sine start is calculated)
 

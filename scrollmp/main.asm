@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.001"
-EngSpec db "00.015.003"
+Version db "00.000.002"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -60,7 +60,7 @@ main:
 
 	; Change default surface accordingly (128 cells wide, full partition)
 
-	jfa us_dsurf_set {up_dsurf, 2, 0, 128, 15}
+	jfa us_dsurf_new {up_dsurf, 2, 0, 128, 15}
 
 	; Trim the output a little: Begin at cell position 4, with 72 cells
 	; width (32 pixels skipped on each edge in 4 bit mode).
@@ -90,7 +90,7 @@ main:
 
 	; Create a big 256x256 tile map of chars in PRAM bank 1 (XOR pattern)
 
-	jfa us_ptr_set16i {3, 0x0002, 0x0000}
+	jfa us_ptr_setwi {3, 0x0002, 0x0000}
 	mov c,    256
 .l0:	sub c,    1
 	mov b,    256
@@ -109,7 +109,7 @@ main:
 
 	; Set up fast scrolling tile mapper
 
-	jfa us_fastmap_set {fmobj, tmobj, up_dsurf, 1, 32, 336, 0x1000, 512, 0xC000}
+	jfa us_fastmap_new {fmobj, tmobj, up_dsurf, 1, 32, 336, 0x1000, 512, 0xC000}
 
 	; Main loop: do a big circular scroll. Note that since the scroll is
 	; timed using the 187.5Hz clock, it will run the same way irrespective
