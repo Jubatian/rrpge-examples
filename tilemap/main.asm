@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple tile map"
-Version db "00.000.000"
-EngSpec db "00.015.002"
+Version db "00.000.001"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -38,7 +38,7 @@ section zero
 
 	; The tile map structure to be set up.
 
-tmobj:	ds 8
+tmobj:	ds 5
 
 
 
@@ -63,15 +63,15 @@ main:
 
 	; Set up tile map
 
-	jfa us_tmap_set {tmobj, up_font_4i, 6, 3, 0x0002, 0x0000}
+	jfa us_tmap_new {tmobj, up_font_4i, 6, 3, 0x0002, 0x0000}
 
 	; Set up for blitting it, set origin at 272:164 (272 is 34 cells).
 
-	jfa us_tmap_getaccxy {tmobj, up_dsurf, 34, 164}
+	jfa us_tmap_accxy {tmobj, up_dsurf, 34, 164}
 
 	; Blit it, replicated once on both X and Y.
 
-	jfa us_tmap_blit {0, 0, 12, 6}
+	jfa us_tmap_blit {tmobj, 0, 0, 12, 6}
 
 	; Wait in infinite loop
 

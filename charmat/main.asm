@@ -16,8 +16,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Character matrix"
-Version db "00.000.000"
-EngSpec db "00.015.001"
+Version db "00.000.001"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -42,7 +42,7 @@ main:
 	; font.
 
 	jfa us_dsurf_getacc {up_dsurf}
-	jfa us_tile_getacc {up_font_4i}
+	jfa us_tile_acc {up_font_4i}
 
 	; Create a nice colorful 16x16 matrix of characters in the center of
 	; the display. One row is 80 cells wide, start with cell 32 to center.
@@ -56,7 +56,7 @@ main:
 	mov x0,    0		; Row counter
 
 .lr:	mov x1,    0		; Column counter
-.lc:	jfa us_tile_blitb {a, d}
+.lc:	jfa us_tile_blit {up_font_4i, a, d}
 	add d,     1
 	add a,     0x0101
 	xbc a,     12

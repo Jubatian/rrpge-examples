@@ -36,7 +36,7 @@ section zero
 
 	; The tile map structure to be set up.
 
-tmobj:	ds 8
+tmobj:	ds 5
 
 	; Fast tile mapper structure to be set up.
 
@@ -105,7 +105,7 @@ main:
 
 	; Set up tile map
 
-	jfa us_tmap_set {tmobj, up_font_4, 256, 256, 0x0002, 0x0000}
+	jfa us_tmap_new {tmobj, up_font_4, 256, 256, 0x0002, 0x0000}
 
 	; Set up fast scrolling tile mapper
 
