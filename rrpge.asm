@@ -2,7 +2,7 @@
 ; RRPGE system assistance definitions
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -97,36 +97,36 @@ P3_RW			equ	0x003F	; Pointer 3 Read / Write
 ; Supervisor calls
 ;
 
-kc_sfi_loadbin		equ	0x0100
-kc_sfi_load		equ	0x0110
-kc_sfi_save		equ	0x0111
-kc_sfi_next		equ	0x0112
-kc_sfi_move		equ	0x0113
-kc_vid_setpal		equ	0x0300
-kc_vid_mode		equ	0x0330
-kc_vid_setst3d		equ	0x0340
-kc_inp_getprops		equ	0x0410
-kc_inp_dropdev		equ	0x0411
-kc_inp_getdidesc	equ	0x0412
-kc_inp_getaidesc	equ	0x0413
-kc_inp_getname		equ	0x0414
-kc_inp_getdi		equ	0x0422
-kc_inp_getai		equ	0x0423
-kc_inp_popchar		equ	0x0424
-kc_inp_checkarea	equ	0x0425
-kc_dly_delay		equ	0x0500
-kc_usr_getlocal		equ	0x0600
-kc_usr_getutf		equ	0x0601
-kc_usr_getlang		equ	0x0610
-kc_usr_getcolors	equ	0x0611
-kc_usr_getst3d		equ	0x0612
-kc_net_send		equ	0x0700
-kc_net_recv		equ	0x0701
-kc_net_listusers	equ	0x0710
-kc_net_setavail		equ	0x0720
-kc_net_getavail		equ	0x0721
-kc_tsk_query		equ	0x0800
-kc_tsk_discard		equ	0x0801
+kc_sfi_loadbin		equ	0x00
+kc_sfi_load		equ	0x01
+kc_sfi_save		equ	0x02
+kc_sfi_next		equ	0x03
+kc_sfi_move		equ	0x04
+kc_vid_setpal		equ	0x08
+kc_vid_mode		equ	0x09
+kc_vid_setst3d		equ	0x0A
+kc_inp_getprops		equ	0x10
+kc_inp_dropdev		equ	0x11
+kc_inp_getdidesc	equ	0x12
+kc_inp_getaidesc	equ	0x13
+kc_inp_getname		equ	0x14
+kc_inp_getdi		equ	0x16
+kc_inp_getai		equ	0x17
+kc_inp_popchar		equ	0x18
+kc_inp_checkarea	equ	0x19
+kc_dly_delay		equ	0x1F
+kc_usr_getlocal		equ	0x20
+kc_usr_getutf		equ	0x21
+kc_usr_getlang		equ	0x22
+kc_usr_getcolors	equ	0x23
+kc_usr_getst3d		equ	0x24
+kc_net_send		equ	0x28
+kc_net_recv		equ	0x29
+kc_net_listusers	equ	0x2A
+kc_net_setavail		equ	0x2B
+kc_net_getavail		equ	0x2C
+kc_tsk_query		equ	0x2E
+kc_tsk_discard		equ	0x2F
 
 ;
 ; User Library functions

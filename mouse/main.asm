@@ -2,7 +2,7 @@
 ; Simple mouse example
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple mouse"
-Version db "00.000.001"
-EngSpec db "00.012.000"
+Version db "00.000.002"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -33,7 +33,7 @@ section code
 	; it comes visible to the application. No checking for return as there
 	; is nothing much to do if there is no mouse.
 
-	jsv {kc_inp_getprops, 0}
+	jsv kc_inp_getprops {0}
 
 	; Register 'b' will hold the color to "draw" with, initially white.
 
@@ -47,11 +47,11 @@ lmain:	; Now enter main loop
 
 	; Get mouse coordinates and calculate offset
 
-	jsv {kc_inp_getai, 0, 1}
+	jsv kc_inp_getai {0, 1}
 	shr x3,    1		; Mouse Y coordinate. It is between 0 and 399, so need to scale down
 	mul x3,    320		; Make offset component of it
 	mov a,     x3
-	jsv {kc_inp_getai, 0, 0}
+	jsv kc_inp_getai {0, 0}
 	shr x3,    1		; Mouse X coordinate. It is between 0 and 639, so need to scale down
 	add a,     x3
 	shl c:a,   3		; Make bit offset as required by the PRAM interface
@@ -62,7 +62,7 @@ lmain:	; Now enter main loop
 	; (secondary) button cycles to the right. Note: input group 0 is the
 	; feedback of touch areas, group 1 gives the mouse buttons.
 
-	jsv {kc_inp_getdi, 0, 1}
+	jsv kc_inp_getdi {0, 1}
 	mov c,     x3
 	xor x3,    d		; Any button state changed?
 	and x3,    c		; Only carry over changes where released -> pressed (click)

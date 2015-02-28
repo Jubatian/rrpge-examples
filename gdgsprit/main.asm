@@ -2,7 +2,7 @@
 ; Graphics Display Generator example program
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.007"
-EngSpec db "00.013.004"
+Version db "00.000.008"
+EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -57,7 +57,7 @@ section code
 
 	; Switch to 640x400, 16 color mode
 
-	jsv {kc_vid_mode, 0}
+	jsv kc_vid_mode {0}
 
 	; Display lists (largest size) are going to be located in the lower
 	; half of Peripheral RAM bank 1:

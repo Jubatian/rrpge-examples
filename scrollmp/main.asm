@@ -2,7 +2,7 @@
 ; Fast scrolling tile map example
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.002"
+Version db "00.000.003"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -50,7 +50,7 @@ main:
 
 	; Switch to 640x400, 16 color mode
 
-	jsv {kc_vid_mode, 0}
+	jsv kc_vid_mode {0}
 
 	; Change source definition A1 to a shift source over PRAM Bank 2, 128
 	; cells wide.
