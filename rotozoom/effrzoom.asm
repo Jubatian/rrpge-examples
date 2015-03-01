@@ -3,7 +3,7 @@
 ; source.
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -122,13 +122,13 @@ effrzoom:
 	mov x2,    x0
 	asr c:x3,  11		; 8 + 3; 8 pixels per cell
 	src x2,    11
-	mov c,     0x800E	; X increment on accelerator
+	mov c,     0x000E	; X increment on accelerator
 	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x3	; X increment whole
 	mov [P_GFIFO_DATA], x2	; X increment fraction
 	asr c:x1,  1		; 8 - 1; Width of data: 128 cells
 	src x0,    1
-	mov c,     0x8008	; Y post-add on accelerator
+	mov c,     0x0008	; Y post-add on accelerator
 	mov [P_GFIFO_ADDR], c
 	mov [P_GFIFO_DATA], x1	; Y post-add whole
 	mov [P_GFIFO_DATA], x0	; Y post-add fraction
@@ -234,18 +234,18 @@ effrzoom:
 	; Submit source start to the accelerator
 
 	mov x2,    P_GFIFO_DATA	; FIFO data receive offset. Will save some words below.
-	mov c,     0x8010	; Pointer Y whole
+	mov c,     0x0010	; Pointer Y whole
 	mov [P_GFIFO_ADDR], c
 	mov [x2],  b		; Whole
 	mov [x2],  a		; Fraction
-	mov c,     0x801A	; Pointer X whole
+	mov c,     0x001A	; Pointer X whole
 	mov [P_GFIFO_ADDR], c
 	mov [x2],  x1		; Whole
 	mov [x2],  x0		; Fraction
 
 	; Start operation
 
-	mov c,     0x801F
+	mov c,     0x001F
 	mov [P_GFIFO_ADDR], c
 	mov [x2],  c		; FIFO starts, accelerator blits
 

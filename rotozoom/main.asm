@@ -18,7 +18,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.014"
+Version db "00.000.015"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -89,7 +89,8 @@ main:
 
 	mov xm2,   PTR16
 	mov x2,    P_GFIFO_DATA
-	mov a,     0x8002	; Destination settings
+	mov x0,    0x8000	; For skipping
+	mov a,     0x0002	; Destination settings
 	mov [P_GFIFO_ADDR], a
 	mov a,     0xF001
 	mov [x2],  a		; Destination bank select & partitioning settings
@@ -97,11 +98,11 @@ main:
 	mov [x2],  a		; Destination partition select
 	mov a,     0x0080
 	mov [x2],  a		; Destination post-add whole
-	mov a,     0x800A	; Pointer X post-add
+	mov a,     0x000A	; Pointer X post-add
 	mov [P_GFIFO_ADDR], a
 	mov a,     0x0050
 	mov [x2],  a		; Pointer X post-add whole
-	mov a,     0x8012	; Source bank & partition
+	mov a,     0x0012	; Source bank & partition
 	mov [P_GFIFO_ADDR], a
 	mov a,     0
 	mov [x2],  a		; Source bank select
@@ -117,10 +118,10 @@ main:
 	mov [x2],  a		; 400 lines
 	mov a,     80
 	mov [x2],  a		; 80 cells / line
-	mov [P_GFIFO_ADDR], x2	; Skip count of cells, fractional
+	mov [P_GFIFO_ADDR], x0	; Skip count of cells, fractional
 	mov a,     0x0000
 	mov [x2],  a		; Pointer X whole
-	mov [P_GFIFO_ADDR], x2	; Skip pointer X, fractional
+	mov [P_GFIFO_ADDR], x0	; Skip pointer X, fractional
 	mov a,     0
 	mov [x2],  a		; Destination whole
 	mov [x2],  a		; Destination fraction
@@ -130,7 +131,7 @@ main:
 	; Set up reindex table by feeding it into the Graphics FIFO.
 
 	mov x3,    reimp
-	mov c,     0x8100	; First reindex register
+	mov c,     0x0100	; First reindex register
 	mov [P_GFIFO_ADDR], c
 .rlop:	mov a,     [x3]
 	mov [x2],  a
@@ -143,12 +144,12 @@ main:
 
 	jfa us_dsurf_getacc {up_dsurf}
 
-	mov c,     0x8006
+	mov c,     0x0006
 	mov [P_GFIFO_ADDR], c
 	mov a,     0
 	mov [x2],  a		; Count post-add whole
 	mov [x2],  a		; Count post-add fraction
-	mov c,     0x8012	; Source settings etc.
+	mov c,     0x0012	; Source settings etc.
 	mov [P_GFIFO_ADDR], c
 	mov a,     1
 	mov [x2],  a		; Source bank select
@@ -166,7 +167,7 @@ main:
 	mov [x2],  a		; 80 cells / line
 	mov a,     0
 	mov [x2],  a		; No fractional for count
-	mov c,     0x801C	; Destination start
+	mov c,     0x001C	; Destination start
 	mov [P_GFIFO_ADDR], c
 	mov a,     0
 	mov [x2],  a		; Destination whole
