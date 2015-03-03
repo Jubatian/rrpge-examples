@@ -2,7 +2,7 @@
 ; Simple RLE decoder
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -57,7 +57,7 @@ section code
 ; param7: Source start low (bit offset)
 ; param8: 2bit -> 4bit expansion table
 ;
-; Registers C and X3 are not preserved. PRAM pointers 2 and 3 are not
+; Registers C and X3 are set zero. PRAM pointers 2 and 3 are not
 ; preserved.
 ;
 
@@ -112,39 +112,53 @@ rledec:
 	mov a,     [$.tcl]	; 'a' will hold destination count low
 	mov b,     [$.tch]	; 'b' will hold destination count high
 	mov x2,    [$.scl]	; 'x2' will hold source count low
+	mov c,     1		; 'c' will hold 1
 
 	; Enter main decode loop
 
-.mloop:
+.mloop:	; Read a source value
 
-	; Read a source value
-
-	xne x2,    0
-	jms .se0		; 0: to source exhausted test
+	jnz x2,    .sn0		; Source count low reached zero?
+	sub [$.sch], c		; 'c' holds 1
+	xbc [$.sch], 15		; Turned 2's complement negative: was zero
+	jms .exit
 .sn0:	sub x2,    1
-	mov c,     [x0]		; Read value
+	mov d,     [x0]		; Read value
 
-	; Decode it. 'x3' will hold the value, 'c' the count.
+	; Decode it. 'x3' will hold the value, 'd' the count.
 
-	mov x3,    c
+	mov x3,    d
 	and x3,    0x3
-	shr c,     2
-	xne c,     0		; If the high part was zero, needs next
-	jms .secv		; Load second value
+	shr d,     2
+	jnz d,     .dece	; Unless high part was zero, done
 
-.dece:	; Source decoded, in 'x3' is the value, and in 'c' the count. First
-	; transform it.
+	; Needs a second source value
+
+	jnz x2,    .sn1		; Source count low reached zero?
+	sub [$.sch], c		; 'c' is still 1
+	xbc [$.sch], 15		; Turned 2's complement negative: was zero
+	jms .exit
+.sn1:	sub x2,    1
+	mov d,     [x0]		; Read value
+
+	; Decode the second value (count into 'd')
+
+	xug 7,     d		; d: 0-6:  powers of 2.
+	jms .dece		; d: 7-15: count.
+	add d,     4
+	shl c,     d		; 'c' is still 1
+	mov d,     c
+
+.dece:	; Source decoded, in 'x3' is the value, and in 'd' the count (which is
+	; nonzero). First transform it.
 
 	add x3,    .ex0
 	mov x3,    [$x3]
 
 	; Write it out as many times as requested
 
-	mov d,     c		; Note: count is nonzero
-	xug d,     a		; Fits in destination count low?
-	jms .dsub		; There is enough destination (0 is never enough here)
-	xeq b,     0		; Destination count high zero?
-	jms .dsub		; Nonzero: Sure there is enough destination
+	jnz b,     .dsub	; Destination count high zero?
+	xul d,     a		; Fits in destination count low?
 	mov d,     a		; Limit to available destination
 	xne d,     0
 	jms .exit		; Destination ran out
@@ -152,8 +166,8 @@ rledec:
 	sbc b,     0
 .oloop:	mov [x1],  x3		; Write the value
 	sub d,     1
-	xeq d,     0
-	jms .oloop
+	jnz d,     .oloop
+	mov c,     1		; Restore 'c' to hold 1
 
 	; A run was written, go on with next
 
@@ -170,39 +184,4 @@ rledec:
 	mov d,     [$x3]
 	mov xm,    [$12]
 
-	rfn
-
-
-.secv:	; Need a second source value
-
-	xne x2,    0
-	jms .se1		; 0: to source exhausted test
-.sn1:	sub x2,    1
-	mov c,     [x0]		; Read value
-
-	; Decode the second value
-
-	xug 7,     c		; c: 0-6:  powers of 2.
-	jms .dece		; c: 7-15: count.
-	add c,     4
-	mov d,     1
-	shl d,     c
-	mov c,     d
-
-	jms .dece
-
-.se0:	; Source value 0 load: source exhaustion check
-
-	mov d,     1
-	sub [$.sch], d
-	xbs [$.sch], 15		; Turned 2's complement negative: was zero
-	jms .sn0
-	; jms .exit (No problem just falling through, will exit)
-
-.se1:	; Source value 1 load: source exhaustion check
-
-	mov d,     1
-	sub [$.sch], d
-	xbs [$.sch], 15		; Turned 2's complement negative: was zero
-	jms .sn1
-	jms .exit
+	rfn c:x3,  0

@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.008"
+Version db "00.000.009"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -126,8 +126,7 @@ section code
 	and b,     0xFF
 	xne b,     0
 	add a,     0x0F00	; Row complete, next row
-	xeq a,     0		; First half done
-	jms .tilp
+	jnz a,     .tilp	; First half done
 	jfa us_copy_pfp {0x0005, 0x0000, 0x0004, 0x0000, 0x9000}
 
 	; Enter main loop
@@ -191,8 +190,7 @@ tilecopy:
 	add [$.toh], c
 	add a,     4
 	sub d,     1
-	xeq d,     0
-	jms .lp
+	jnz d,     .lp
 
 .exit:	; Restore CPU regs & exit
 
@@ -310,8 +308,7 @@ renderbars:
 .lp:	mov c,     [x2]
 	jfa us_dlist_db_addbg {c, c, 1, [x0]}
 	sub a,     1
-	xeq a,     0
-	jms .lp
+	jnz a,     .lp
 
 	; Restore CPU regs & exit
 

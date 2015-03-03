@@ -2,7 +2,7 @@
 ; Wave effect on a display list.
 ;
 ; Author    Sandor Zsuga (Jubatian)
-; Copyright 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+; Copyright 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
 ;           License) extended as RRPGEvt (temporary version of the RRPGE
 ;           License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
 ;           root.
@@ -32,8 +32,8 @@ section code
 ; param5: Display list line size (number of entries / line).
 ; param6: Number of lines to alter.
 ;
-; Registers C and X3 are not preserved. PRAM pointers 2 and 3 are not
-; preserved. XM3 is assumed to be PTR16I.
+; Registers C and X3 are set zero. PRAM pointers 2 and 3 are not preserved.
+; XM3 is assumed to be PTR16I.
 ;
 
 effwave:
@@ -57,7 +57,7 @@ effwave:
 	; Sanitize sine multiplier
 
 	mov a,     [$.sml]
-	xug 0x100, a
+	xul a,     0x100
 	mov a,     0x100
 	mov [$.sml], a
 
@@ -75,8 +75,8 @@ effwave:
 
 	; Prepare pointer for sine source (in 'd', the sine start is calculated)
 
-	mov d,     [$.sst]
-	and d,     0xFF		; Sine start offset
+	mov d,     0xFF		; Sine start offset
+	and d,     [$.sst]
 	shl d,     3		; Shifted to bit address
 	add d,     0xC800	; Sine is at 0xC800 - 0xCFFF (PRAM bit offset, low)
 	jfa us_ptr_set8i {3, 0x01FF, d}
@@ -91,23 +91,22 @@ effwave:
 	shr a,     8
 	add a,     [$.pbs]	; Added base, now it is a start offset
 	and a,     0x3FF	; Limit to 10 bits
-	mov b,     [P2_RW]
-	and b,     0xFC00	; Preserve high bits
+	mov b,     0xFC00	; Preserve high bits
+	and b,     [P2_RW]
 	or  b,     a
 	mov [P2_RW], b
 	sub c,     1
-	xeq c,     0
-	jms .lp
+	jnz c,     .lp
 
 	; Restore regs & return
 
-	mov d,    [$9]
-	mov b,    [$8]
-	mov a,    [$7]
-	rfn
+	mov d,     [$9]
+	mov b,     [$8]
+	mov a,     [$7]
+	rfn c:x3,  0
 
 .swr:	; Handle sine wraparound
 
-	mov d,    0x800
+	mov d,     0x800
 	sub [P3_AL], d
 	jms .swe

@@ -18,7 +18,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.015"
+Version db "00.000.016"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -185,8 +185,7 @@ main:
 
 .lmw:	jsv kc_dly_delay {0xFFFF}
 .lm:	mov a,     [P_GFIFO_STAT]
-	xeq a,     0		; Wait for FIFO empty
-	jms .lmw
+	jnz a,     .lmw		; Wait for FIFO empty
 	mov a,     [P_CLOCK]
 	shr a,     1
 	xch x0,    a		; x0: new 94Hz tick, a: old tick value

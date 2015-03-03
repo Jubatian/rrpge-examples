@@ -41,7 +41,7 @@ section code
 ; param2: Rotation (9 bits)
 ; param3: Zoom (0x100: 1:1, no zooming)
 ;
-; Registers C and X3 are not preserved.
+; Registers C and X3 are zeroed.
 ;
 effrzoom:
 
@@ -76,15 +76,11 @@ effrzoom:
 
 	; Pre-calculate trigonometric functions
 
-	mov x3,    [$.rt]
-	mov b,     x3
-	and x3,    0x1FF
-	add x3,    0xFE00
+	mov x3,    0xFE00
+	or  x3,    [$.rt]
 	mov a,     [x3]		; sin(rt)
-	mov x3,    b
 	add x3,    0x80
-	and x3,    0x1FF
-	add x3,    0xFE00
+	or  x3,    0xFE00
 	mov b,     [x3]		; cos(rt)
 	mov d,     b		; Expand cos(rt) (-0x4000 - 0x4000)
 	shl c:d,   2
@@ -260,4 +256,4 @@ effrzoom:
 	mov d,     [$x3]
 	mov xm,    [$14]
 
-	rfn
+	rfn c:x3,  0

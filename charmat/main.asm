@@ -16,7 +16,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Character matrix"
-Version db "00.000.002"
+Version db "00.000.003"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -53,20 +53,18 @@ main:
 
 	mov d,     0x20A0	; Start offset on destination
 	mov a,     0x0100	; Character tile to output
-	mov x0,    0		; Row counter
+	mov x0,    16		; Row counter
 
-.lr:	mov x1,    0		; Column counter
+.lr:	mov x1,    16		; Column counter
 .lc:	jfa us_tile_blit {up_font_4i, a, d}
 	add d,     1
 	add a,     0x0101
 	xbc a,     12
 	sub a,     0x0F00	; Wrap color to cover colors 1 - 15
-	add x1,    1
-	xbs x1,    4		; Reached 16
-	jms .lc
+	sub x1,    1
+	jnz x1,    .lc
 	add d,     0x03B0	; To next row
-	add x0,    1
-	xbs x0,    4		; Reached 16
-	jms .lr
+	sub x0,    1
+	jnz x0,    .lr
 
 .lm:	jms .lm
