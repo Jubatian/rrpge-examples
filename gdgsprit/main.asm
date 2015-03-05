@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.009"
+Version db "00.000.010"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -390,15 +390,14 @@ rendertext:
 	mov [$7],  x1
 	mov [$8],  x2
 	mov [$9],  xm
-	mov [$10], xh
+	mov [$10], xb
 
 	; There are 2 rows, 30 characters each text, add those to the display
 	; list as needed.
 
 	mov xm,    0x6866	; X3: PTR16I, X2: PTR8I, X1: PTR16I, X0: PTR16I
 	mov x2,    [$.tof]
-	shl c:x2,  1
-	mov xh2,   c		; Pointer for text prepared in X2
+	mov xb2,   0		; Pointer for text prepared in X2
 
 	; Prepare loop terminators
 
@@ -434,7 +433,7 @@ rendertext:
 	mov x1,    [$7]
 	mov x2,    [$8]
 	mov xm,    [$9]
-	mov xh,    [$10]
+	mov xb,    [$10]
 	rfn
 
 
