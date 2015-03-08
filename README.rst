@@ -7,7 +7,7 @@ RRPGE Example applications
    :width: 100%
 
 :Author:    Sandor Zsuga (Jubatian)
-:Copyright: 2013 - 2014, GNU GPLv3 (version 3 of the GNU General Public
+:Copyright: 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
             License) extended as RRPGEvt (temporary version of the RRPGE
             License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
             root.
@@ -29,7 +29,9 @@ As of now only the following examples are functional: ::
 
     charmat
     gdgsprit
+    hello
     mouse
+    printf
     rle
     rotozoom
     scrollmp
