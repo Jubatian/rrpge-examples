@@ -16,7 +16,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Printf"
-Version db "00.000.000"
+Version db "00.000.001"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -52,7 +52,7 @@ sincos:	db "Sine & Cosine outputs, just to demonstrate formatters. The range is 
 	db "Dec %5u %+6d %+6d %11ld %11ld %11ld\n", 0
 sincoh:	db "Hex  %04X   %04X   %04X    %08lX    %08lX    %08lX\n", 0
 angle:	db "\n"
-	db "Input angle (%-5u) in degrees: %i\n", 0
+	db "Input angle (%-5u) in degrees: %i  \n", 0
 
 frate:	db "Frame rate:%4i FPS", 0
 
