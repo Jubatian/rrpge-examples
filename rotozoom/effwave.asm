@@ -46,13 +46,9 @@ effwave:
 .dls	equ	5		; Display list line size
 .lno	equ	6		; Number of lines to alter
 
-	mov sp,    10		; Reserve space on stack
-
 	; Save registers
 
-	mov [$7],  a
-	mov [$8],  b
-	mov [$9],  d
+	psh a, b, d
 
 	; Sanitize sine multiplier
 
@@ -100,9 +96,7 @@ effwave:
 
 	; Restore regs & return
 
-	mov d,     [$9]
-	mov b,     [$8]
-	mov a,     [$7]
+	pop a, b, d
 	rfn c:x3,  0
 
 .swr:	; Handle sine wraparound

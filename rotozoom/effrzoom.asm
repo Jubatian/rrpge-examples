@@ -60,19 +60,12 @@ effrzoom:
 .t3h	equ	12		; 1-cos(rt)
 .t3l	equ	13
 
-	mov sp,    21		; Reserve some space on the stack
+	mov sp,    14		; Reserve some space on the stack
 
 	; Save CPU registers
 
-	mov [$14], xm
+	psh a, b, d, x0, x1, x2, xm, xb
 	mov xm,    0x6466	; x3: PTR16I, x2: PTR16, rest: don't care
-	mov x3,    15
-	mov [$x3], x2
-	mov [$x3], x1
-	mov [$x3], x0
-	mov [$x3], a
-	mov [$x3], b
-	mov [$x3], d
 
 	; Pre-calculate trigonometric functions
 
@@ -247,13 +240,5 @@ effrzoom:
 
 	; Restore CPU registers & Exit
 
-	mov x3,    15
-	mov x2,    [$x3]
-	mov x1,    [$x3]
-	mov x0,    [$x3]
-	mov a,     [$x3]
-	mov b,     [$x3]
-	mov d,     [$x3]
-	mov xm,    [$14]
-
+	pop a, b, d, x0, x1, x2, xm, xb
 	rfn c:x3,  0

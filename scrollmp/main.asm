@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.004"
-EngSpec db "00.016.000"
+Version db "00.000.005"
+EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0
 

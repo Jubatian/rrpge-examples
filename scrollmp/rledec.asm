@@ -72,27 +72,21 @@ rledec:
 .srh	equ	6		; Source, high
 .srl	equ	7		; Source, low
 .ex0	equ	8		; Expansion table, expansion for 0
+
 .ex1	equ	9		; Expansion for 1
 .ex2	equ	10		; Expansion for 2
 .ex3	equ	11		; Expansion for 3
 .exe	equ	12		; End of expansions
 
-	mov sp,    19		; Reserve space on the stack
+	mov sp,    12		; Reserve space on the stack
 
-	; Save CPU registers & current bank selections
+	; Save CPU registers
 
-	mov [$12], xm
+	psh a, b, d, x0, x1, x2, xm, xb
+
+	; Decode the expansion table
+
 	mov xm,    0x6444	; 'x3': PTR16I, rest: PTR16
-	mov x3,    13
-	mov [$x3], x2
-	mov [$x3], x1
-	mov [$x3], x0
-	mov [$x3], a
-	mov [$x3], b
-	mov [$x3], d
-
-	; Decode the expansion table (x3 is incrementing 16 bits)
-
 	mov a,     [$.ex0]
 	mov x3,    .ex0
 .l0:	mov [$x3], a		; Don't care for high bits, they won't show.
@@ -175,13 +169,5 @@ rledec:
 
 .exit:	; Restore CPU registers & exit
 
-	mov x3,    13
-	mov x2,    [$x3]
-	mov x1,    [$x3]
-	mov x0,    [$x3]
-	mov a,     [$x3]
-	mov b,     [$x3]
-	mov d,     [$x3]
-	mov xm,    [$12]
-
+	pop a, b, d, x0, x1, x2, xm, xb
 	rfn c:x3,  0

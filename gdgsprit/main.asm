@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.010"
-EngSpec db "00.016.000"
+Version db "00.000.011"
+EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -197,7 +197,7 @@ tilecopy:
 	mov a,     [$.stl]
 	mov b,     [$.tpt]
 	mov d,     [$4]
-	rfn
+	rfn c:x3,  0
 
 
 
@@ -265,7 +265,7 @@ sinewave:
 
 	mov a,     [$.sst]
 	mov b,     [$.siz]
-	rfn
+	rfn c:x3,  0
 
 .swr:	; Handle sine wraparound
 
@@ -288,35 +288,29 @@ renderbars:
 .rps	equ	0		; Rasterbar positions
 .rpt	equ	1		; Rasterbar patterns
 
-	mov sp,    6
-
 	; Save CPU regs
 
-	mov [$2],  a
-	mov [$3],  x0
-	mov [$4],  x2
-	mov [$5],  xm
+	psh a, x0, x2
 
 	; Simple, slow solution. Faster would be possible by writing specific
 	; routine to do this instead of calling us_dlist_db_addbg for one line
 	; each.
 
+	mov x0,    [$.rps]
+	mov x2,    [$.rpt]
+	mov [$0],  xm		; Save 'xm'
 	mov xm,    0x6666	; Everything PTR16I
-	mov x0,    [bp + .rps]
-	mov x2,    [bp + .rpt]
 	mov a,     8		; 8 rasterbars
 .lp:	mov c,     [x2]
 	jfa us_dlist_db_addbg {c, c, 1, [x0]}
 	sub a,     1
 	jnz a,     .lp
+	mov xm,    [$0]		; Restore 'xm'
 
 	; Restore CPU regs & exit
 
-	mov a,     [$2]
-	mov x0,    [$3]
-	mov x2,    [$4]
-	mov xm,    [$5]
-	rfn
+	pop a, x0, x2
+	rfn c:x3,  0
 
 
 
@@ -331,39 +325,32 @@ renderrows:
 
 .rps	equ	0		; Row positions
 
-	mov sp,    5
-
 	; Save CPU regs
 
-	xch x2,    [$.rps]	; Load row position data offset, save 'x2'
-	mov [$1],  a
-	mov [$2],  b
-	mov [$3],  d
-	mov [$4],  xm
+	psh a, b, d, x2
 
 	; 25 rows of tiles, shift source for scrolling background, so no X,
 	; but produce a wrapping position
 
+	mov x2,    [$.rps]
+	mov [$0],  xm		; Save 'xm'
 	mov xm2,   PTR16I
 	mov a,     0x1000	; Render command high
 	mov d,     0		; Y position
-.lp:	mov b,     [x2]
-	and b,     0x03FF	; Low 10 bits are position
-	or  b,     0x8000
+.lp:	mov b,     0x03FF	; Low 10 bits are position
+	and b,     [x2]
+	bts b,     15
 	jfa us_dlist_db_add {a, b, 16, 1, d}
 	add a,     16
 	add d,     16
 	xeq d,     400
 	jms .lp
+	mov xm,    [$0]		; Restore 'xm'
 
 	; Restore CPU regs & exit
 
-	mov x2,    [$.rps]
-	mov a,     [$1]
-	mov b,     [$2]
-	mov d,     [$3]
-	mov xm,    [$4]
-	rfn
+	pop a, b, d, x2
+	rfn c:x3,  0
 
 
 
@@ -377,20 +364,15 @@ rendertext:
 
 .cps	equ	0		; Column positions
 .tof	equ	1		; Text start offset
+
 .cpe	equ	2		; End column position for X loop termination
 .ade	equ	3		; End adjust position for Y loop termination
 
-	mov sp,    11
+	mov sp,    4
 
 	; Save CPU regs
 
-	mov [$4],  a
-	mov [$5],  b
-	mov [$6],  d
-	mov [$7],  x1
-	mov [$8],  x2
-	mov [$9],  xm
-	mov [$10], xb
+	psh a, b, d, x0, x1, x2, xm, xb
 
 	; There are 2 rows, 30 characters each text, add those to the display
 	; list as needed.
@@ -401,8 +383,8 @@ rendertext:
 
 	; Prepare loop terminators
 
-	mov c,     [$.cps]
-	add c,     30
+	mov c,     30
+	add c,     [$.cps]
 	mov [$.cpe], c		; Inner (X) loop termination
 	mov c,     80
 	mov [$.ade], c		; Outer (Y) loop termination
@@ -427,14 +409,8 @@ rendertext:
 
 	; Restore CPU regs & exit
 
-	mov a,     [$4]
-	mov b,     [$5]
-	mov d,     [$6]
-	mov x1,    [$7]
-	mov x2,    [$8]
-	mov xm,    [$9]
-	mov xb,    [$10]
-	rfn
+	pop a, b, d, x0, x1, x2, xm, xb
+	rfn c:x3,  0
 
 
 
