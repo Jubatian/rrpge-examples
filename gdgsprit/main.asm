@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.011"
+Version db "00.000.013"
 EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -167,13 +167,11 @@ tilecopy:
 .tol	equ	2		; Target offset low
 .tpt	equ	3		; Target pitch
 
-	mov sp,    5
-
 	; Save CPU regs
 
+	psh d
 	xch a,     [$.stl]	; Save 'a' and load source tile index
 	xch b,     [$.tpt]	; Save 'b' and load target pitch
-	mov [$4],  d
 
 	; Check source tile index, convert to offset or exit
 
@@ -196,7 +194,7 @@ tilecopy:
 
 	mov a,     [$.stl]
 	mov b,     [$.tpt]
-	mov d,     [$4]
+	pop d
 	rfn c:x3,  0
 
 
@@ -290,7 +288,7 @@ renderbars:
 
 	; Save CPU regs
 
-	psh a, x0, x2
+	psh a, x0, x2, xm
 
 	; Simple, slow solution. Faster would be possible by writing specific
 	; routine to do this instead of calling us_dlist_db_addbg for one line
@@ -298,18 +296,16 @@ renderbars:
 
 	mov x0,    [$.rps]
 	mov x2,    [$.rpt]
-	mov [$0],  xm		; Save 'xm'
 	mov xm,    0x6666	; Everything PTR16I
 	mov a,     8		; 8 rasterbars
 .lp:	mov c,     [x2]
 	jfa us_dlist_db_addbg {c, c, 1, [x0]}
 	sub a,     1
 	jnz a,     .lp
-	mov xm,    [$0]		; Restore 'xm'
 
 	; Restore CPU regs & exit
 
-	pop a, x0, x2
+	pop a, x0, x2, xm
 	rfn c:x3,  0
 
 
@@ -327,13 +323,12 @@ renderrows:
 
 	; Save CPU regs
 
-	psh a, b, d, x2
+	psh a, b, d, x2, xm
 
 	; 25 rows of tiles, shift source for scrolling background, so no X,
 	; but produce a wrapping position
 
 	mov x2,    [$.rps]
-	mov [$0],  xm		; Save 'xm'
 	mov xm2,   PTR16I
 	mov a,     0x1000	; Render command high
 	mov d,     0		; Y position
@@ -345,11 +340,10 @@ renderrows:
 	add d,     16
 	xeq d,     400
 	jms .lp
-	mov xm,    [$0]		; Restore 'xm'
 
 	; Restore CPU regs & exit
 
-	pop a, b, d, x2
+	pop a, b, d, x2, xm
 	rfn c:x3,  0
 
 
@@ -372,7 +366,7 @@ rendertext:
 
 	; Save CPU regs
 
-	psh a, b, d, x0, x1, x2, xm, xb
+	psh a, b, d, x1, x2, xm, xb
 
 	; There are 2 rows, 30 characters each text, add those to the display
 	; list as needed.
@@ -409,7 +403,7 @@ rendertext:
 
 	; Restore CPU regs & exit
 
-	pop a, b, d, x0, x1, x2, xm, xb
+	pop a, b, d, x1, x2, xm, xb
 	rfn c:x3,  0
 
 

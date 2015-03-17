@@ -82,7 +82,7 @@ rledec:
 
 	; Save CPU registers
 
-	psh a, b, d, x0, x1, x2, xm, xb
+	psh a, b, d, x0, x1, x2, xm
 
 	; Decode the expansion table
 
@@ -169,5 +169,5 @@ rledec:
 
 .exit:	; Restore CPU registers & exit
 
-	pop a, b, d, x0, x1, x2, xm, xb
+	pop a, b, d, x0, x1, x2, xm
 	rfn c:x3,  0

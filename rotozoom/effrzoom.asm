@@ -64,7 +64,7 @@ effrzoom:
 
 	; Save CPU registers
 
-	psh a, b, d, x0, x1, x2, xm, xb
+	psh a, b, d, x0, x1, x2, xm
 	mov xm,    0x6466	; x3: PTR16I, x2: PTR16, rest: don't care
 
 	; Pre-calculate trigonometric functions
@@ -240,5 +240,5 @@ effrzoom:
 
 	; Restore CPU registers & Exit
 
-	pop a, b, d, x0, x1, x2, xm, xb
+	pop a, b, d, x0, x1, x2, xm
 	rfn c:x3,  0

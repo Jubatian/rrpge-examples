@@ -16,7 +16,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: RLE decoder"
-Version db "00.000.006"
+Version db "00.000.007"
 EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0

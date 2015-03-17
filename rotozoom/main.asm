@@ -18,7 +18,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.017"
+Version db "00.000.018"
 EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0
