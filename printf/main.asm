@@ -16,7 +16,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Printf"
-Version db "00.000.001"
+Version db "00.000.002"
 EngSpec db "00.016.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -118,7 +118,7 @@ main:
 	; buffering routines, they enforce this wait where it is necessary).
 
 	jms .lm
-.lmw:	jsv kc_dly_delay {0xFFFF}
+.lmw:	jsv kc_dly_delay {0x2000}
 .lm:	mov a,     [P_GFIFO_STAT]
 	jnz a,     .lmw		; Wait for FIFO empty
 	mov a,     [P_CLOCK]

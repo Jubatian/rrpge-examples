@@ -18,7 +18,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.018"
+Version db "00.000.019"
 EngSpec db "00.017.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -183,7 +183,7 @@ main:
 	mov x0,    [P_CLOCK]	; 187.5Hz clock
 	shr x0,    1
 
-.lmw:	jsv kc_dly_delay {0xFFFF}
+.lmw:	jsv kc_dly_delay {0x2000}
 .lm:	mov a,     [P_GFIFO_STAT]
 	jnz a,     .lmw		; Wait for FIFO empty
 	mov a,     [P_CLOCK]
@@ -202,13 +202,6 @@ main:
 	add x2,    0xFE00	; Offset of large sine (-0x4000 - 0x4000)
 	mov a,     [x2]
 
-	; Run wave effect
-
-	mov b,     a
-	add b,     0x4000	; 0x0000 - 0x8000
-	shr b,     8		; 0x00 - 0x80
-	jfa effwave {0, x1, b, 0x001F, 0xE003, 4, 400}
-
 	; Run rotozoomer
 
 	mov b,     a
@@ -224,6 +217,13 @@ main:
 	shr d,     1
 	add d,     0x80		; 90 degrees aligning rotation
 	jfa effrzoom {320, 200, d, b}
+
+	; Run wave effect
+
+	mov b,     a
+	add b,     0x4000	; 0x0000 - 0x8000
+	shr b,     8		; 0x00 - 0x80
+	jfa effwave {0, x1, b, 0x001F, 0xE003, 4, 400}
 
 	; Main loop ends
 
