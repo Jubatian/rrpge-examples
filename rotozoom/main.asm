@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.019"
-EngSpec db "00.017.000"
+Version db "00.000.020"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -65,17 +65,6 @@ reimp_end:
 section code
 
 main:
-
-	; Switch to 640x400, 16 color mode
-
-	jsv kc_vid_mode {0}
-
-	; Set up display list for 400 image lines. Will use entry 1 of the
-	; list for this. Clearing the list is not necessary since the default
-	; list for double scanned mode also only contained nonzero for entry
-	; 1 (every second entry 1 position in the 400 line list).
-
-	jfa us_dlist_sb_add {0x0000, 0xC000, 400, 1, 0}
 
 	; Copy RLE (1927 words) data into PRAM (high half of bank 0)
 
