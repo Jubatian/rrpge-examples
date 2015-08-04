@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.013"
-EngSpec db "00.017.000"
+Version db "00.000.014"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -55,36 +55,32 @@ rasps:	ds 8			; Rasterbar positions
 
 section code
 
-	; Switch to 640x400, 16 color mode
-
-	jsv kc_vid_mode {0}
-
 	; Display lists (largest size) are going to be located in the lower
 	; half of Peripheral RAM bank 1:
-	; 0x20000 - 0x27FFF (Display list definition: 0x0083)
-	; 0x28000 - 0x2FFFF (Display list definition: 0x00A3)
+	; 0x20000 - 0x27FFF (Display list definition: 0x0031)
+	; 0x28000 - 0x2FFFF (Display list definition: 0x4031)
 	; Their usage:
 	; Column 0: BG: Rasterbars
 	; Column 1: Waving tile pattern, PRAM bank 2
 	; Column 2: RRPGE Logo, PRAM bank 0, low half
 	; Column 9-31: 23 sprite columns
 
-	; Set up GDG sources. Source A0 is OK with the default setup (0x0082,
+	; Set up GDG sources. Source A0 is OK with the default setup (0x0050,
 	; 80 column wide positioned source on PRAM bank 0, used for the RRPGE
 	; Logo)
 
 	mov x3,    P_GDG_SA1
-	mov a,     0x02F0	; Waving tile pattern: 128 cell wide shift ...
+	mov a,     0x2087	; Waving tile pattern: 128 cell wide shift ...
 	mov [x3],  a		; ... source on PRAM bank 2
-	mov a,     0x8120	; Sprites (text): 2 cell wide positioned ...
+	mov a,     0x1002	; Sprites (text): 2 cell wide positioned ...
 	mov [x3],  a		; ... source on high half of PRAM bank 1
 
 	; Pre-fill Column 2 of the lists (stationary). Just shows the dragon
 	; from PRAM bank 0, leaving the bottom 145 lines unused, so the waving
 	; text can get enough GDG cycles to render.
 
-	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x0083, 0}
-	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x00A3, 0}
+	jfa us_dlist_add {0x1040, 0x8000, 255, 2, 0x0031, 0}
+	jfa us_dlist_add {0x1040, 0x8000, 255, 2, 0x4031, 0}
 
 	; Prepare sprites: give columns 9 - 31 inclusive (23 cols) to them.
 
@@ -100,7 +96,7 @@ section code
 	; Cells to clear in a streak:   24 (=> 0x0018)
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
-	jfa us_dbuf_init {0x0083, 0x00A3, 0x4A18}
+	jfa us_dbuf_init {0x0031, 0x4031, 0x4A18}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -114,7 +110,7 @@ section code
 	jfa us_copy_pfc {0x0001, 0x0000, font_rle, 570}
 	jfa rledec {  0,   9216, 0, 0xFFFF, 0x0030, 0x0000, 0x0010, 0x0000, 0x3000}
 
-	; Using the noise data in PRAM, fill up VRAM page 2 with tiles. The
+	; Using the noise data in PRAM, fill up PRAM page 2 with tiles. The
 	; noise data as 4 bit source is enough for 16 rows of tile data, the
 	; remaining 9 rows are simply copied.
 
@@ -330,13 +326,14 @@ renderrows:
 
 	mov x2,    [$.rps]
 	mov xm2,   PTR16I
-	mov a,     0x1000	; Render command high
+	mov a,     0x0000	; Render command high
 	mov d,     0		; Y position
 .lp:	mov b,     0x03FF	; Low 10 bits are position
 	and b,     [x2]
-	bts b,     15
+	bts b,     15		; Enabled
+	bts b,     12		; Source definition A1 selected
 	jfa us_dlist_db_add {a, b, 16, 1, d}
-	add a,     16
+	add a,     2048
 	add d,     16
 	xeq d,     400
 	jms .lp
@@ -393,7 +390,7 @@ rendertext:
 	xne x3,    0
 	jms .nsp		; Zero render command: no sprite to draw
 	add b,     d		; Row adjust Y
-	jfa us_smux_addxy {x3, 0x8000, 16, 0, a, b}
+	jfa us_smux_addxy {x3, 0xA000, 16, 0, a, b}
 .nsp:	add a,     20		; Next X position
 	xeq x1,    [$.cpe]	; Inner (X) loop terminates after 30 chars
 	jms .l1
@@ -433,12 +430,12 @@ getcharcomm:
 	jms .alf
 	jms .spc
 .num:	sub x3,    '0'
-	shl x3,    4
-	add x3,    0x21A0
+	shl x3,    5
+	add x3,    0x8340
 	rfn
 .alf:	sub x3,    'A'
-	shl x3,    4
-	add x3,    0x2000
+	shl x3,    5
+	add x3,    0x8000
 	rfn
 
 
