@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.006"
-EngSpec db "00.017.000"
+Version db "00.000.007"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -48,14 +48,10 @@ section code
 
 main:
 
-	; Switch to 640x400, 16 color mode
-
-	jsv kc_vid_mode {0}
-
 	; Change source definition A1 to a shift source over PRAM Bank 2, 128
 	; cells wide.
 
-	mov x3,    0x02F0
+	mov x3,    0x2087
 	mov [P_GDG_SA1], x3
 
 	; Change default surface accordingly (128 cells wide, full partition)
@@ -71,16 +67,16 @@ main:
 	; Prepare column 2 of the display lists to show PRAM Bank 0, where the
 	; dragon logo will be unpacked
 
-	jfa us_dlist_add {0x0000, 0x8000, 400, 2, 0x0780, 0}
-	jfa us_dlist_add {0x0000, 0x8000, 400, 2, 0x0784, 0}
+	jfa us_dlist_add {0x0000, 0x0400, 400, 2, 0xF000, 0}
+	jfa us_dlist_add {0x0000, 0x0400, 400, 2, 0xF080, 0}
 
 	; Display lists (smallest size) are going to be located in the low end
 	; of Peripheral RAM bank 15:
-	; (16 bit) 0x1E0000 - 0x1E0FFF (Display list definition: 0x0780)
-	; (16 bit) 0x1E1000 - 0x1E1FFF (Display list definition: 0x0784)
+	; (16 bit) 0x1E0000 - 0x1E0FFF (Display list definition: 0xF000)
+	; (16 bit) 0x1E1000 - 0x1E1FFF (Display list definition: 0xF080)
 	; Prepare for double buffering, setting the display lists.
 
-	jfa us_dbuf_init {0x0780, 0x0784, 0x0000}
+	jfa us_dbuf_init {0xF000, 0xF080, 0x0000}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -107,7 +103,7 @@ main:
 
 	; Set up fast scrolling tile mapper
 
-	jfa us_fastmap_new {fmobj, tmobj, up_dsurf, 1, 32, 336, 0x1000, 512, 0xC000}
+	jfa us_fastmap_new {fmobj, tmobj, up_dsurf, 1, 32, 336, 0x2400}
 
 	; Main loop: do a big circular scroll. Note that since the scroll is
 	; timed using the 187.5Hz clock, it will run the same way irrespective

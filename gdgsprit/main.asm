@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.014"
+Version db "00.000.015"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -57,8 +57,8 @@ section code
 
 	; Display lists (largest size) are going to be located in the lower
 	; half of Peripheral RAM bank 1:
-	; 0x20000 - 0x27FFF (Display list definition: 0x0031)
-	; 0x28000 - 0x2FFFF (Display list definition: 0x4031)
+	; 0x20000 - 0x27FFF (Display list definition: 0x1003)
+	; 0x28000 - 0x2FFFF (Display list definition: 0x1403)
 	; Their usage:
 	; Column 0: BG: Rasterbars
 	; Column 1: Waving tile pattern, PRAM bank 2
@@ -79,8 +79,8 @@ section code
 	; from PRAM bank 0, leaving the bottom 145 lines unused, so the waving
 	; text can get enough GDG cycles to render.
 
-	jfa us_dlist_add {0x1040, 0x8000, 255, 2, 0x0031, 0}
-	jfa us_dlist_add {0x1040, 0x8000, 255, 2, 0x4031, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, 0x1003, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, 0x1403, 0}
 
 	; Prepare sprites: give columns 9 - 31 inclusive (23 cols) to them.
 
@@ -96,7 +96,7 @@ section code
 	; Cells to clear in a streak:   24 (=> 0x0018)
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
-	jfa us_dbuf_init {0x0031, 0x4031, 0x4A18}
+	jfa us_dbuf_init {0x1003, 0x1403, 0x4A18}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -330,8 +330,8 @@ renderrows:
 	mov d,     0		; Y position
 .lp:	mov b,     0x03FF	; Low 10 bits are position
 	and b,     [x2]
-	bts b,     15		; Enabled
-	bts b,     12		; Source definition A1 selected
+	or  b,     0x0400	; High half-palette 1 selected
+	or  b,     0x2000	; Source definition A1 selected
 	jfa us_dlist_db_add {a, b, 16, 1, d}
 	add a,     2048
 	add d,     16
@@ -390,7 +390,7 @@ rendertext:
 	xne x3,    0
 	jms .nsp		; Zero render command: no sprite to draw
 	add b,     d		; Row adjust Y
-	jfa us_smux_addxy {x3, 0xA000, 16, 0, a, b}
+	jfa us_smux_addxy {x3, 0x4400, 16, 0, a, b}
 .nsp:	add a,     20		; Next X position
 	xeq x1,    [$.cpe]	; Inner (X) loop terminates after 30 chars
 	jms .l1
