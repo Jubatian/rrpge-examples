@@ -17,63 +17,80 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple mouse"
-Version db "00.000.002"
-EngSpec db "00.016.000"
+Version db "00.000.003"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
-section desc
-
-org 0x000A
-	dw 0x0001		; Request mouse device
-
 section code
 
-	; If a mouse is present, it will show up as device 0. Just poll it so
-	; it comes visible to the application. No checking for return as there
-	; is nothing much to do if there is no mouse.
+main:
 
-	jsv kc_inp_getprops {0}
+	; Request a mouse device (no check for whether it is actually
+	; available, just a simple example)
+
+	jsv kc_inp_reqdev {0, DEV_POINT}
 
 	; Register 'b' will hold the color to "draw" with, initially white.
 
 	mov b,     3
 
-	; Register 'd' will hold previous mouse button states, to detect clicks.
+	; Register 'x0' will hold mouse X coordinate, and 'x1' the Y.
 
-	mov d,     0
+	mov x0,    320
+	mov x1,    200
 
-lmain:	; Now enter main loop
+	; Enter main loop, waiting for events and acting upon them
 
-	; Get mouse coordinates and calculate offset
+.lp:	jsv kc_inp_pop {}
+	jnz c,     .lps
+	jsv kc_dly_delay {65535}
+	jms .lp			; Wait for event if there is none
 
-	jsv kc_inp_getai {0, 1}
-	shr x3,    1		; Mouse Y coordinate. It is between 0 and 399, so need to scale down
-	mul x3,    320		; Make offset component of it
-	mov a,     x3
-	jsv kc_inp_getai {0, 0}
-	shr x3,    1		; Mouse X coordinate. It is between 0 and 639, so need to scale down
-	add a,     x3
-	shl c:a,   3		; Make bit offset as required by the PRAM interface
-	mov [P2_AH], c
-	mov [P2_AL], a
+.lps:	; There is an event in c:x3. Check if it is a beginning event, if not,
+	; ignore it. So X:Y locations coming with button presses will simply
+	; be discarded.
 
-	; Get buttons: left (primary) button cycles color to left, right
-	; (secondary) button cycles to the right. Note: input group 0 is the
-	; feedback of touch areas, group 1 gives the mouse buttons.
+	xbs c,     11
+	jms .lp			; Not a beginning event
 
-	jsv kc_inp_getdi {0, 1}
-	mov c,     x3
-	xor x3,    d		; Any button state changed?
-	and x3,    c		; Only carry over changes where released -> pressed (click)
-	mov d,     c		; Update previous button state
-	xbc x3,    4		; Primary button click?
-	sub b,     1		; Cycle color to left
-	xbc x3,    5		; Secondary button click?
-	add b,     1		; Cycle color to right
+	; Since only the mouse is requested, assume everything coming from it,
+	; just branching by event message type.
 
-	; Plot pixel
+	and c,     0xF
+	xne c,     2
+	mov x0,    x3		; X location update
+	xne c,     3
+	mov x1,    x3		; Y location update
+	xeq c,     0
+	jms .eep
+	xne x3,    1
+	add b,     1		; Left button press, increment color
+	xne x3,    2
+	sub b,     1		; Right button press, decrement color
 
-	mov [P2_RW],  b
+.eep:	; Until events are arriving, process them without rendering.
 
-	jms lmain
+	jsv kc_inp_peek {}
+	jnz c,     .lp		; An event is still waiting
+
+	; Calculate offset for pixel
+
+	mov x2,    x1
+	mul c:x2,  640
+	mov x3,    c
+	add c:x2,  x0
+	add x3,    c		; Offset in x3:x2 in pixel
+	shl c:x2,  2
+	slc x3,    2		; Make bit offset
+
+	; Output it. PRAM pointer 1 will be used since it is initially set up
+	; for 4 bit access, suitable for the display.
+
+	mov [P1_AH], x3
+	mov [P1_AL], x2
+	mov [P1_RW], b
+
+	; Done, return to reading events
+
+	jms .lp
