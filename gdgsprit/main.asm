@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.015"
+Version db "00.000.016"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -55,6 +55,8 @@ rasps:	ds 8			; Rasterbar positions
 
 section code
 
+main:
+
 	; Display lists (largest size) are going to be located in the lower
 	; half of Peripheral RAM bank 1:
 	; 0x20000 - 0x27FFF (Display list definition: 0x1003)
@@ -70,9 +72,9 @@ section code
 	; Logo)
 
 	mov x3,    P_GDG_SA1
-	mov a,     0x2087	; Waving tile pattern: 128 cell wide shift ...
+	mov a,     0x2086	; Waving tile pattern: 128 cell wide shift ...
 	mov [x3],  a		; ... source on PRAM bank 2
-	mov a,     0x1002	; Sprites (text): 2 cell wide positioned ...
+	mov a,     0x1001	; Sprites (text): 2 cell wide positioned ...
 	mov [x3],  a		; ... source on high half of PRAM bank 1
 
 	; Pre-fill Column 2 of the lists (stationary). Just shows the dragon
@@ -88,10 +90,8 @@ section code
 
 	; Prepare for double buffering, setting the display lists.
 	; Display list clear setup: needs to clear the background and columns
-	; 9-31. Note that this is the maximum what the display list clear can
-	; manage (24 columns total). On the first line clearing the bg. is
-	; skipped since it is not possible to form a suitable clear command
-	; containing it.
+	; 9-31. On the first line clearing the bg. is skipped since it is not
+	; possible to form a suitable clear command containing it.
 	; Initial cells to skip:         9 (=> 0x4800)
 	; Cells to clear in a streak:   24 (=> 0x0018)
 	; Cells to skip after a streak:  8 (=> 0x0200)

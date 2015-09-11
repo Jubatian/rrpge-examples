@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.007"
+Version db "00.000.008"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -51,7 +51,7 @@ main:
 	; Change source definition A1 to a shift source over PRAM Bank 2, 128
 	; cells wide.
 
-	mov x3,    0x2087
+	mov x3,    0x2086
 	mov [P_GDG_SA1], x3
 
 	; Change default surface accordingly (128 cells wide, full partition)
@@ -59,9 +59,9 @@ main:
 	jfa us_dsurf_new {up_dsurf, 2, 0, 128, 15}
 
 	; Trim the output a little: Begin at cell position 4, with 72 cells
-	; width (32 pixels skipped on each edge in 4 bit mode).
+	; width (32 pixels skipped on each edge).
 
-	mov x3,    0x4804
+	mov x3,    0x2402
 	mov [P_GDG_SMRA], x3
 
 	; Prepare column 2 of the display lists to show PRAM Bank 0, where the
