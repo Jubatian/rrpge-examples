@@ -16,7 +16,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Printf"
-Version db "00.000.003"
+Version db "00.000.004"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -73,7 +73,7 @@ main:
 	; Set up character writer for outputting colored text on the screen
 	; (colorkey transparency)
 
-	jfa us_cw_tile_new {writt, up_font_4i, up_dsurf, 1}
+	jfa us_cw_tile_new {writt, up_fonti, up_dsurf, 1}
 
 	; Print title text with RRPGE palette color descriptions
 
@@ -82,7 +82,7 @@ main:
 	; Prepare for main loop, change to non-colorkeyed text so it can be
 	; overwritten but would need reindex tables for coloring
 
-	jfa us_cw_tile_new {writt, up_font_4, up_dsurf, 0}
+	jfa us_cw_tile_new {writt, up_font, up_dsurf, 0}
 
 	; Allocate some stack space for temporary vars
 

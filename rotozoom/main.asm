@@ -18,7 +18,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.020"
+Version db "00.000.021"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -188,7 +188,7 @@ main:
 	mov x2,    x1
 	shr x2,    1
 	and x2,    0x1FF
-	add x2,    0xFE00	; Offset of large sine (-0x4000 - 0x4000)
+	add x2,    up_sine	; Offset of large sine (-0x4000 - 0x4000)
 	mov a,     [x2]
 
 	; Run rotozoomer
@@ -212,7 +212,7 @@ main:
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     8		; 0x00 - 0x80
-	jfa effwave {0, x1, b, 0x001F, 0xE003, 4, 400}
+	jfa effwave {0, x1, b, up16h_dlist0, 0x0003, 4, 400} ; up16l_dlist0 is zero
 
 	; Main loop ends
 

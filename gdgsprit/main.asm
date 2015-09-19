@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.016"
+Version db "00.000.017"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -57,11 +57,7 @@ section code
 
 main:
 
-	; Display lists (largest size) are going to be located in the lower
-	; half of Peripheral RAM bank 1:
-	; 0x20000 - 0x27FFF (Display list definition: 0x1003)
-	; 0x28000 - 0x2FFFF (Display list definition: 0x1403)
-	; Their usage:
+	; Display list  usage:
 	; Column 0: BG: Rasterbars
 	; Column 1: Waving tile pattern, PRAM bank 2
 	; Column 2: RRPGE Logo, PRAM bank 0, low half
@@ -77,12 +73,16 @@ main:
 	mov a,     0x1001	; Sprites (text): 2 cell wide positioned ...
 	mov [x3],  a		; ... source on high half of PRAM bank 1
 
+	; Clear default display list (getting rid of default display)
+
+	jfa us_dlist_clear {DLDEF_0_32}
+
 	; Pre-fill Column 2 of the lists (stationary). Just shows the dragon
 	; from PRAM bank 0, leaving the bottom 145 lines unused, so the waving
 	; text can get enough GDG cycles to render.
 
-	jfa us_dlist_add {0x1040, 0x0400, 255, 2, 0x1003, 0}
-	jfa us_dlist_add {0x1040, 0x0400, 255, 2, 0x1403, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, DLDEF_0_32, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, DLDEF_1_32, 0}
 
 	; Prepare sprites: give columns 9 - 31 inclusive (23 cols) to them.
 
@@ -96,7 +96,7 @@ main:
 	; Cells to clear in a streak:   24 (=> 0x0018)
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
-	jfa us_dbuf_init {0x1003, 0x1403, 0x4A18}
+	jfa us_dbuf_init {DLDEF_0_32, DLDEF_1_32, 0x4A18}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -111,10 +111,10 @@ main:
 	jfa rledec {  0,   9216, 0, 0xFFFF, 0x0030, 0x0000, 0x0010, 0x0000, 0x3000}
 
 	; Using the noise data in PRAM, fill up PRAM page 2 with tiles. The
-	; noise data as 4 bit source is enough for 16 rows of tile data, the
-	; remaining 9 rows are simply copied.
+	; noise data with its reductions as 4 bit source is enough for 16 rows
+	; of tile data, the remaining 9 rows are copied.
 
-	jfa us_ptr_set4i {1, 0x01FF, 0xF000}
+	jfa us_ptr_set4i {1, up1h_smp, up1l_smp_nois1}
 	mov a,     0
 .tilp:	jfa tilecopy {[P1_RW], 0x0004, a, 256}
 	add a,     4
@@ -227,8 +227,8 @@ sinewave:
 	shl [$.inc], c		; Increment converted to bit units
 	and a,     0xFF		; Sine start offset
 	shl a,     3		; Shifted to bit address
-	add a,     0xC800	; Sine is at 0xC800 - 0xCFFF (PRAM bit offset, low)
-	jfa us_ptr_setgen {3, 0x01FF, a, 0, [$.inc], 3}
+	add a,     up1l_smp_sine
+	jfa us_ptr_setgen {3, up1h_smp, a, 0, [$.inc], 3}
 
 	; Prepare target and loop count
 
@@ -239,9 +239,8 @@ sinewave:
 	; (2's complement). Then increment sine offset
 
 	mov c,     [P3_RW]
-	xbc [P3_AL], 12
-	jms .swr		; Sine wraparound (reached 0xD000 or above)
-.swe:	sub c,     0x80		; Center the sine (2's complement)
+	btc [P3_AL], 11		; Wrap around sine (don't let it reach the reductions)
+	sub c,     0x80		; Center the sine (2's complement)
 
 	; Apply multiplier, and calculate target value
 
@@ -260,12 +259,6 @@ sinewave:
 	mov a,     [$.sst]
 	mov b,     [$.siz]
 	rfn c:x3,  0
-
-.swr:	; Handle sine wraparound
-
-	mov a,     0x800
-	sub [P3_AL], a
-	jms .swe
 
 
 

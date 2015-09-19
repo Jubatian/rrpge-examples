@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Fast tile map scroll"
-Version db "00.000.008"
+Version db "00.000.009"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -67,16 +67,12 @@ main:
 	; Prepare column 2 of the display lists to show PRAM Bank 0, where the
 	; dragon logo will be unpacked
 
-	jfa us_dlist_add {0x0000, 0x0400, 400, 2, 0xF000, 0}
-	jfa us_dlist_add {0x0000, 0x0400, 400, 2, 0xF080, 0}
+	jfa us_dlist_add {0x0000, 0x0400, 400, 2, DLDEF_0_4, 0}
+	jfa us_dlist_add {0x0000, 0x0400, 400, 2, DLDEF_1_4, 0}
 
-	; Display lists (smallest size) are going to be located in the low end
-	; of Peripheral RAM bank 15:
-	; (16 bit) 0x1E0000 - 0x1E0FFF (Display list definition: 0xF000)
-	; (16 bit) 0x1E1000 - 0x1E1FFF (Display list definition: 0xF080)
 	; Prepare for double buffering, setting the display lists.
 
-	jfa us_dbuf_init {0xF000, 0xF080, 0x0000}
+	jfa us_dbuf_init {DLDEF_0_4, DLDEF_1_4, 0x0000}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -99,7 +95,7 @@ main:
 
 	; Set up tile map
 
-	jfa us_tmap_new {tmobj, up_font_4, 256, 256, 0x0002, 0x0000}
+	jfa us_tmap_new {tmobj, up_font, 256, 256, 0x0002, 0x0000}
 
 	; Set up fast scrolling tile mapper
 

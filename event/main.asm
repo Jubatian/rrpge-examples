@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple events"
-Version db "00.000.000"
+Version db "00.000.001"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -45,7 +45,7 @@ main:
 	; Set up for printf, using the non-colored text so it can be
 	; overwritten as events come in.
 
-	jfa us_cw_tile_new {writt, up_font_4, up_dsurf, 0}
+	jfa us_cw_tile_new {writt, up_font, up_dsurf, 0}
 
 	; Request devices
 

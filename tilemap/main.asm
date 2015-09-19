@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Simple tile map"
-Version db "00.000.004"
+Version db "00.000.005"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -52,7 +52,7 @@ main:
 
 	; Set up tile map
 
-	jfa us_tmap_new {tmobj, up_font_4i, 6, 3, 0x0002, 0x0000}
+	jfa us_tmap_new {tmobj, up_fonti, 6, 3, 0x0002, 0x0000}
 
 	; Set up for blitting it, set origin at 272:164 (272 is 34 cells).
 
