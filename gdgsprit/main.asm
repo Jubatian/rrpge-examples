@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.017"
+Version db "00.000.018"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -110,6 +110,11 @@ main:
 	jfa us_copy_pfc {0x0001, 0x0000, font_rle, 570}
 	jfa rledec {  0,   9216, 0, 0xFFFF, 0x0030, 0x0000, 0x0010, 0x0000, 0x3000}
 
+	; Initially display nothing, will reveal in the main loop (the dragon
+	; logo however RLE decodes on-screen as a crude effect)
+
+	jfa us_dlist_setbounds {200, 200}
+
 	; Using the noise data in PRAM, fill up PRAM page 2 with tiles. The
 	; noise data with its reductions as 4 bit source is enough for 16 rows
 	; of tile data, the remaining 9 rows are copied.
@@ -125,12 +130,25 @@ main:
 	jnz a,     .tilp	; First half done
 	jfa us_copy_pfp {0x0005, 0x0000, 0x0004, 0x0000, 0x9000}
 
+	; Register 'b' is used to reveal the background and text by setting
+	; the vertical bounds for the display list & sprite managers
+
+	mov b,     0
+
 	; Enter main loop
 
 .lm:	jfa us_dbuf_flip
 
 	mov a,     [P_CLOCK]
 	shr a,     2
+
+	mov x0,    200
+	sub x0,    b
+	mov x1,    200
+	add x1,    b
+	jfa us_dlist_setbounds {x0, x1}
+	xug b,     199
+	add b,     1
 
 	jfa sinewave {colps, 30, a, 300,    70, 14}
 	jfa sinewave {rowps, 25, a,   0, 0x100,  5}
