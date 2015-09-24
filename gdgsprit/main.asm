@@ -17,7 +17,7 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.018"
+Version db "00.000.019"
 EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
@@ -135,12 +135,24 @@ main:
 
 	mov b,     0
 
+	; Register 'd' is used to remember the last effective clock value,
+	; to reduce CPU consumption by avoiding calculating unnecessary
+	; frames. This also smoothens playback a bit.
+
+	mov d,     [P_CLOCK]
+	shr d,     2
+
 	; Enter main loop
 
-.lm:	jfa us_dbuf_flip
-
-	mov a,     [P_CLOCK]
-	shr a,     2
+.lmw:	jsv kc_dly_delay {5000}
+.lm:	mov a,     [P_CLOCK]
+	shr a,     2		; ~47 Hz (187.5Hz / 4)
+	xne a,     d
+	jmr .lmw		; No clock change: wait
+	mov x2,    a
+	sub x2,    d
+	and x2,    0x3FFF	; Change (usually should be 1, but may be larger)
+	mov d,     a		; Save new clock value to see change in next iteration
 
 	mov x0,    200
 	sub x0,    b
@@ -148,7 +160,7 @@ main:
 	add x1,    b
 	jfa us_dlist_setbounds {x0, x1}
 	xug b,     199
-	add b,     1
+	add b,     x2
 
 	jfa sinewave {colps, 30, a, 300,    70, 14}
 	jfa sinewave {rowps, 25, a,   0, 0x100,  5}
@@ -156,6 +168,8 @@ main:
 	jfa renderrows {rowps}
 	jfa renderbars {rasps, rbars}
 	jfa rendertext {colps, txt0}
+
+	jfa us_dbuf_flip
 
 	jms .lm
 
