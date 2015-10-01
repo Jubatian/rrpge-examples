@@ -74,16 +74,15 @@ effwave:
 	mov d,     0xFF		; Sine start offset
 	and d,     [$.sst]
 	shl d,     3		; Shifted to bit address
-	add d,     0xC800	; Sine is at 0xC800 - 0xCFFF (PRAM bit offset, low)
-	jfa us_ptr_set8i {3, 0x01FF, d}
+	add d,     up1l_smp_sine
+	jfa us_ptr_set8i {3, up1h_smp, d}
 
 	; Produce display list
 
 	mov c,     [$.lno]	; Line count to alter
 .lp:	mov a,     [P3_RW]	; Load next sine value
-	xbc [P3_AL], 12
-	jms .swr		; Sine wraparound (reached 0xD000)
-.swe:	mul a,     [$.sml]
+	btc [P3_AL], 11		; Wrap around sample (not allowing reach in sample reductions)
+	mul a,     [$.sml]
 	shr a,     8
 	add a,     [$.pbs]	; Added base, now it is a start offset
 	and a,     0x3FF	; Limit to 10 bits
@@ -98,9 +97,3 @@ effwave:
 
 	pop a, b, d
 	rfn c:x3,  0
-
-.swr:	; Handle sine wraparound
-
-	mov d,     0x800
-	sub [P3_AL], d
-	jms .swe

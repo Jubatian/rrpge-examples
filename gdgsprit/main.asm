@@ -17,8 +17,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: GDG Sprites"
-Version db "00.000.013"
-EngSpec db "00.017.000"
+Version db "00.000.019"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -55,36 +55,34 @@ rasps:	ds 8			; Rasterbar positions
 
 section code
 
-	; Switch to 640x400, 16 color mode
+main:
 
-	jsv kc_vid_mode {0}
-
-	; Display lists (largest size) are going to be located in the lower
-	; half of Peripheral RAM bank 1:
-	; 0x20000 - 0x27FFF (Display list definition: 0x0083)
-	; 0x28000 - 0x2FFFF (Display list definition: 0x00A3)
-	; Their usage:
+	; Display list  usage:
 	; Column 0: BG: Rasterbars
 	; Column 1: Waving tile pattern, PRAM bank 2
 	; Column 2: RRPGE Logo, PRAM bank 0, low half
 	; Column 9-31: 23 sprite columns
 
-	; Set up GDG sources. Source A0 is OK with the default setup (0x0082,
+	; Set up GDG sources. Source A0 is OK with the default setup (0x0050,
 	; 80 column wide positioned source on PRAM bank 0, used for the RRPGE
 	; Logo)
 
 	mov x3,    P_GDG_SA1
-	mov a,     0x02F0	; Waving tile pattern: 128 cell wide shift ...
+	mov a,     0x2086	; Waving tile pattern: 128 cell wide shift ...
 	mov [x3],  a		; ... source on PRAM bank 2
-	mov a,     0x8120	; Sprites (text): 2 cell wide positioned ...
+	mov a,     0x1001	; Sprites (text): 2 cell wide positioned ...
 	mov [x3],  a		; ... source on high half of PRAM bank 1
+
+	; Clear default display list (getting rid of default display)
+
+	jfa us_dlist_clear {DLDEF_0_32}
 
 	; Pre-fill Column 2 of the lists (stationary). Just shows the dragon
 	; from PRAM bank 0, leaving the bottom 145 lines unused, so the waving
 	; text can get enough GDG cycles to render.
 
-	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x0083, 0}
-	jfa us_dlist_add {0x0104, 0x8000, 255, 2, 0x00A3, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, DLDEF_0_32, 0}
+	jfa us_dlist_add {0x1040, 0x0400, 255, 2, DLDEF_1_32, 0}
 
 	; Prepare sprites: give columns 9 - 31 inclusive (23 cols) to them.
 
@@ -92,15 +90,13 @@ section code
 
 	; Prepare for double buffering, setting the display lists.
 	; Display list clear setup: needs to clear the background and columns
-	; 9-31. Note that this is the maximum what the display list clear can
-	; manage (24 columns total). On the first line clearing the bg. is
-	; skipped since it is not possible to form a suitable clear command
-	; containing it.
+	; 9-31. On the first line clearing the bg. is skipped since it is not
+	; possible to form a suitable clear command containing it.
 	; Initial cells to skip:         9 (=> 0x4800)
 	; Cells to clear in a streak:   24 (=> 0x0018)
 	; Cells to skip after a streak:  8 (=> 0x0200)
 
-	jfa us_dbuf_init {0x0083, 0x00A3, 0x4A18}
+	jfa us_dbuf_init {DLDEF_0_32, DLDEF_1_32, 0x4A18}
 
 	; Decode RLE encoded logo into it's display location, using the high
 	; half of PRAM bank 0 for temporarily storing the RLE encoded stream
@@ -114,11 +110,16 @@ section code
 	jfa us_copy_pfc {0x0001, 0x0000, font_rle, 570}
 	jfa rledec {  0,   9216, 0, 0xFFFF, 0x0030, 0x0000, 0x0010, 0x0000, 0x3000}
 
-	; Using the noise data in PRAM, fill up VRAM page 2 with tiles. The
-	; noise data as 4 bit source is enough for 16 rows of tile data, the
-	; remaining 9 rows are simply copied.
+	; Initially display nothing, will reveal in the main loop (the dragon
+	; logo however RLE decodes on-screen as a crude effect)
 
-	jfa us_ptr_set4i {1, 0x01FF, 0xF000}
+	jfa us_dlist_setbounds {200, 200}
+
+	; Using the noise data in PRAM, fill up PRAM page 2 with tiles. The
+	; noise data with its reductions as 4 bit source is enough for 16 rows
+	; of tile data, the remaining 9 rows are copied.
+
+	jfa us_ptr_set4i {1, up1h_smp, up1l_smp_nois1}
 	mov a,     0
 .tilp:	jfa tilecopy {[P1_RW], 0x0004, a, 256}
 	add a,     4
@@ -129,12 +130,37 @@ section code
 	jnz a,     .tilp	; First half done
 	jfa us_copy_pfp {0x0005, 0x0000, 0x0004, 0x0000, 0x9000}
 
+	; Register 'b' is used to reveal the background and text by setting
+	; the vertical bounds for the display list & sprite managers
+
+	mov b,     0
+
+	; Register 'd' is used to remember the last effective clock value,
+	; to reduce CPU consumption by avoiding calculating unnecessary
+	; frames. This also smoothens playback a bit.
+
+	mov d,     [P_CLOCK]
+	shr d,     2
+
 	; Enter main loop
 
-.lm:	jfa us_dbuf_flip
+.lmw:	jsv kc_dly_delay {5000}
+.lm:	mov a,     [P_CLOCK]
+	shr a,     2		; ~47 Hz (187.5Hz / 4)
+	xne a,     d
+	jmr .lmw		; No clock change: wait
+	mov x2,    a
+	sub x2,    d
+	and x2,    0x3FFF	; Change (usually should be 1, but may be larger)
+	mov d,     a		; Save new clock value to see change in next iteration
 
-	mov a,     [P_CLOCK]
-	shr a,     2
+	mov x0,    200
+	sub x0,    b
+	mov x1,    200
+	add x1,    b
+	jfa us_dlist_setbounds {x0, x1}
+	xug b,     199
+	add b,     x2
 
 	jfa sinewave {colps, 30, a, 300,    70, 14}
 	jfa sinewave {rowps, 25, a,   0, 0x100,  5}
@@ -142,6 +168,8 @@ section code
 	jfa renderrows {rowps}
 	jfa renderbars {rasps, rbars}
 	jfa rendertext {colps, txt0}
+
+	jfa us_dbuf_flip
 
 	jms .lm
 
@@ -231,8 +259,8 @@ sinewave:
 	shl [$.inc], c		; Increment converted to bit units
 	and a,     0xFF		; Sine start offset
 	shl a,     3		; Shifted to bit address
-	add a,     0xC800	; Sine is at 0xC800 - 0xCFFF (PRAM bit offset, low)
-	jfa us_ptr_setgen {3, 0x01FF, a, 0, [$.inc], 3}
+	add a,     up1l_smp_sine
+	jfa us_ptr_setgen {3, up1h_smp, a, 0, [$.inc], 3}
 
 	; Prepare target and loop count
 
@@ -243,9 +271,8 @@ sinewave:
 	; (2's complement). Then increment sine offset
 
 	mov c,     [P3_RW]
-	xbc [P3_AL], 12
-	jms .swr		; Sine wraparound (reached 0xD000 or above)
-.swe:	sub c,     0x80		; Center the sine (2's complement)
+	btc [P3_AL], 11		; Wrap around sine (don't let it reach the reductions)
+	sub c,     0x80		; Center the sine (2's complement)
 
 	; Apply multiplier, and calculate target value
 
@@ -264,12 +291,6 @@ sinewave:
 	mov a,     [$.sst]
 	mov b,     [$.siz]
 	rfn c:x3,  0
-
-.swr:	; Handle sine wraparound
-
-	mov a,     0x800
-	sub [P3_AL], a
-	jms .swe
 
 
 
@@ -330,13 +351,14 @@ renderrows:
 
 	mov x2,    [$.rps]
 	mov xm2,   PTR16I
-	mov a,     0x1000	; Render command high
+	mov a,     0x0000	; Render command high
 	mov d,     0		; Y position
 .lp:	mov b,     0x03FF	; Low 10 bits are position
 	and b,     [x2]
-	bts b,     15
+	or  b,     0x0400	; High half-palette 1 selected
+	or  b,     0x2000	; Source definition A1 selected
 	jfa us_dlist_db_add {a, b, 16, 1, d}
-	add a,     16
+	add a,     2048
 	add d,     16
 	xeq d,     400
 	jms .lp
@@ -393,7 +415,7 @@ rendertext:
 	xne x3,    0
 	jms .nsp		; Zero render command: no sprite to draw
 	add b,     d		; Row adjust Y
-	jfa us_smux_addxy {x3, 0x8000, 16, 0, a, b}
+	jfa us_smux_addxy {x3, 0x4400, 16, 0, a, b}
 .nsp:	add a,     20		; Next X position
 	xeq x1,    [$.cpe]	; Inner (X) loop terminates after 30 chars
 	jms .l1
@@ -433,12 +455,12 @@ getcharcomm:
 	jms .alf
 	jms .spc
 .num:	sub x3,    '0'
-	shl x3,    4
-	add x3,    0x21A0
+	shl x3,    5
+	add x3,    0x8340
 	rfn
 .alf:	sub x3,    'A'
-	shl x3,    4
-	add x3,    0x2000
+	shl x3,    5
+	add x3,    0x8000
 	rfn
 
 

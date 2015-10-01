@@ -18,8 +18,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Rotozoomer"
-Version db "00.000.019"
-EngSpec db "00.017.000"
+Version db "00.000.021"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -65,17 +65,6 @@ reimp_end:
 section code
 
 main:
-
-	; Switch to 640x400, 16 color mode
-
-	jsv kc_vid_mode {0}
-
-	; Set up display list for 400 image lines. Will use entry 1 of the
-	; list for this. Clearing the list is not necessary since the default
-	; list for double scanned mode also only contained nonzero for entry
-	; 1 (every second entry 1 position in the 400 line list).
-
-	jfa us_dlist_sb_add {0x0000, 0xC000, 400, 1, 0}
 
 	; Copy RLE (1927 words) data into PRAM (high half of bank 0)
 
@@ -199,7 +188,7 @@ main:
 	mov x2,    x1
 	shr x2,    1
 	and x2,    0x1FF
-	add x2,    0xFE00	; Offset of large sine (-0x4000 - 0x4000)
+	add x2,    up_sine	; Offset of large sine (-0x4000 - 0x4000)
 	mov a,     [x2]
 
 	; Run rotozoomer
@@ -223,7 +212,7 @@ main:
 	mov b,     a
 	add b,     0x4000	; 0x0000 - 0x8000
 	shr b,     8		; 0x00 - 0x80
-	jfa effwave {0, x1, b, 0x001F, 0xE003, 4, 400}
+	jfa effwave {0, x1, b, up16h_dlist0, 0x0003, 4, 400} ; up16l_dlist0 is zero
 
 	; Main loop ends
 

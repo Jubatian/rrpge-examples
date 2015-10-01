@@ -16,8 +16,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Hello world"
-Version db "00.000.000"
-EngSpec db "00.016.000"
+Version db "00.000.002"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -46,12 +46,11 @@ main:
 	; Create a tile character writer for the display surface
 	; The parameters:
 	; Param0: The character writer object to fill in
-	; Param1: The font to use. up_font_8i is a colorable font for the 256
-	;         color display (8 bit mode).
+	; Param1: The font to use. up_fonti is a colorable font.
 	; Param2: The destination surface. up_dsurf is the initial screen.
 	; Param3: The initial text color. 12 is a bright blue.
 
-	jfa us_cw_tile_new {charw, up_font_8i, up_dsurf, 12}
+	jfa us_cw_tile_new {charw, up_fonti, up_dsurf, 12}
 
 	; Position somewhere more pleasant than the very upper left corner
 

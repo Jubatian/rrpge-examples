@@ -16,8 +16,8 @@ include "../rrpge.asm"
 
 AppAuth db "Jubatian"
 AppName db "Example: Character matrix"
-Version db "00.000.004"
-EngSpec db "00.016.000"
+Version db "00.000.006"
+EngSpec db "00.018.000"
 License db "RRPGEvt", "\n"
         db 0
 
@@ -27,22 +27,11 @@ section code
 
 main:
 
-	; Switch to 640x400, 16 color mode
-
-	jsv kc_vid_mode {0}
-
-	; Set up display list for 400 image lines. Will use entry 1 of the
-	; list for this. Clearing the list is not necessary since the default
-	; list for double scanned mode also only contained nonzero for entry
-	; 1 (every second entry 1 position in the 400 line list).
-
-	jfa us_dlist_sb_add {0x0000, 0xC000, 400, 1, 0}
-
 	; Set up for tile blitting to the default surface, from 4 bit inverted
 	; font.
 
 	jfa us_dsurf_getacc {up_dsurf}
-	jfa us_tile_acc {up_font_4i}
+	jfa us_tile_acc {up_fonti}
 
 	; Create a nice colorful 16x16 matrix of characters in the center of
 	; the display. One row is 80 cells wide, start with cell 32 to center.
@@ -56,7 +45,7 @@ main:
 	mov x0,    16		; Row counter
 
 .lr:	mov x1,    16		; Column counter
-.lc:	jfa us_tile_blit {up_font_4i, a, d}
+.lc:	jfa us_tile_blit {up_fonti, a, d}
 	add d,     1
 	add c:a,   0x1001
 	xeq c,     0
