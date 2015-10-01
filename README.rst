@@ -7,7 +7,7 @@ RRPGE Example applications
    :width: 100%
 
 :Author:    Sandor Zsuga (Jubatian)
-:License:   2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
+:Copyright: 2013 - 2015, GNU GPLv3 (version 3 of the GNU General Public
             License) extended as RRPGEvt (temporary version of the RRPGE
             License): see LICENSE.GPLv3 and LICENSE.RRPGEvt in the project
             root.
@@ -21,22 +21,6 @@ Introduction
 
 A mix of simple to complex example applications to demonstrate the features of
 RRPGE, and to provide guidance for programming the RRPGE CPU.
-
-Currently transition is ongoing in accordance to Specification 00.013.000. New
-or rewised examples are released under the Temporary RRPGE License.
-
-As of now only the following examples are functional: ::
-
-    charmat
-    gdgsprit
-    hello
-    mouse
-    printf
-    rle
-    rotozoom
-    scrollmp
-    simplegf
-    tilemap
 
 
 Related projects
@@ -77,13 +61,6 @@ The examples
 ------------------------------------------------------------------------------
 
 
-Binary data (data)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Demonstrates the use of extra binary data in the application binary, showing
-how this data may be loaded, and used to display a 320x400 image.
-
-
 GDG Sprites (gdgsprit)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -102,13 +79,6 @@ sprites. This example also contains some ready to use libraries:
   engine utilizing the Accelerator as well.
 
 
-Mixer (mixer)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Shows basic audio mixer usage, also demonstrating the use of some built-in
-sample data.
-
-
 Mouse (mouse)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -121,27 +91,6 @@ Noise (noise)
 The most basic example program producing noise. This program may be one of the
 firsts when testing a new RRPGE implementation, requiring the least from the
 host.
-
-
-Proportional text (proptext)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Proportional text output using the Graphics Accelerator. It contains several
-small libraries to achieve it's goals:
-
-- Copy (copy.asm): A generic copy capable to copy any amount of data between
-  any two locations, utilizing DMA where possible.
-
-- Blitter (blit.asm; blitnc.asm; blitsupp.asm): Generic blitter useful for
-  most types of Block Blitter usage, such as working with Accelerator sprites.
-
-- Text (textblit.asm; textlgen.asm): Proportional text output capable to build
-  multi-line texts with left, right, center or justify alignments with some
-  support for text formatting.
-
-- Compact 1bit font definition (fontdef1.asm): A font definition expander
-  which may be used for saving some bits of storage space compared to storing
-  a full 256 * 4 Word font definition.
 
 
 Rotozoomer (rotozoom)
